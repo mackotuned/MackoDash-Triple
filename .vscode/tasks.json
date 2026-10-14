@@ -1,0 +1,54 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "ESP-IDF: Build Center P4",
+			"type": "shell",
+			"command": "$env:IDF_PYTHON_ENV_PATH='C:\\Users\\mackb\\.espressif\\python_env\\idf5.5_py3.11_env'; & 'C:\\Users\\mackb\\esp\\v5.5\\esp-idf\\export.ps1'; idf.py -C 'apps\\center_p4' build",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "ESP-IDF: Build Left S3",
+			"type": "shell",
+			"command": "$env:IDF_PYTHON_ENV_PATH='C:\\Users\\mackb\\.espressif\\python_env\\idf5.5_py3.11_env'; & 'C:\\Users\\mackb\\esp\\v5.5\\esp-idf\\export.ps1'; idf.py -C 'apps\\left_s3' build",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "ESP-IDF: Build Right S3",
+			"type": "shell",
+			"command": "$env:IDF_PYTHON_ENV_PATH='C:\\Users\\mackb\\.espressif\\python_env\\idf5.5_py3.11_env'; & 'C:\\Users\\mackb\\esp\\v5.5\\esp-idf\\export.ps1'; idf.py -C 'apps\\right_s3' build",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "ESP-IDF: Build Center P4",
+			"type": "shell",
+			"command": "& 'C:\\Users\\mackb\\esp\\v5.5\\esp-idf\\export.ps1'; idf.py -C 'apps\\center_p4' build",
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		}
+	]
+}
