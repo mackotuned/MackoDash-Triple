@@ -21,6 +21,8 @@
 ## Confirmed Board References
 
 - The P4 schematic identifies PCB design Rev1.1; a visible PCB revision marking is not required.
+- The connected ESP32-P4 reports silicon revision v1.3; center builds select the compatible Rev1.0+ profile and 360 MHz CPU frequency.
+- The connected center board reports 32 MB flash, matching its ESP32-P4NRW32 hardware profile.
 - P4 J8 exposes `GPIO30` and `GPIO31` directly on the 40-pin header.
 - S3 printed `RXD` is `GPIO44`; printed `TXD` is `GPIO43` and is unused here.
 - Center display support uses `waveshare/esp32_p4_wifi6_touch_lcd_xc` version `3.0.1`.

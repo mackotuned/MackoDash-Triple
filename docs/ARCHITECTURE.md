@@ -23,6 +23,16 @@ There is no S3-to-P4 return wire, so acknowledgements and display-health telemet
 are not part of this transport. Sequence gaps and local receive timeouts provide
 the side-display diagnostics.
 
+## Side Firmware Updates
+
+Each S3 requires one initial USB flash to install the display application and an
+OTA-capable receiver. A later milestone can embed the left and right S3 images in
+the P4 firmware and stream them into each S3 OTA partition over the cluster links.
+Reliable automatic updates should add each S3 `TXD` (`GPIO43`) to a separate P4
+RX pin so the P4 can receive block acknowledgements, retry failed blocks, and
+confirm the new image before the S3 reboots. The current one-way wiring remains
+sufficient for normal gauge data.
+
 ## Rendering
 
 The center screen owns the primary speed/RPM experience and global warnings. The

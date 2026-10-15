@@ -32,7 +32,8 @@ esp_err_t cluster_uart_init_tx(uart_port_t port, int tx_gpio, int baud_rate)
     if (result != ESP_OK) {
         return result;
     }
-    return uart_driver_install(port, 0, 0, 0, NULL, 0);
+    return uart_driver_install(port, CLUSTER_UART_DRIVER_RX_BUFFER_SIZE,
+                               0, 0, NULL, 0);
 }
 
 esp_err_t cluster_uart_init_rx(cluster_uart_receiver_t *receiver,
