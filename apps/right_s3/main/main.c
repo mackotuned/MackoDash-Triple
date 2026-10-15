@@ -9,6 +9,7 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "side_display.h"
 
 static const char *TAG = "triple_right";
 
@@ -32,6 +33,8 @@ void app_main(void)
     ESP_LOGI(TAG, "Cluster protocol self-test: %s",
              protocol_self_test() ? "PASS" : "FAIL");
 
+    ESP_ERROR_CHECK(side_display_start());
+
     cluster_uart_receiver_t receiver = {0};
     ESP_ERROR_CHECK(cluster_uart_init_rx(
         &receiver, (uart_port_t)CLUSTER_SIDE_UART_PORT,
@@ -49,6 +52,10 @@ void app_main(void)
             if (cluster_frame_decode(frame, frame_size, &view) == CLUSTER_PROTOCOL_OK) {
                 ESP_LOGI(TAG, "Frame type=%u sequence=%u center_uptime=%" PRIu32,
                          (unsigned)view.type, view.sequence, view.uptime_ms);
+                if (view.type == CLUSTER_MSG_HEARTBEAT) {
+                    ESP_ERROR_CHECK(side_display_update_link(
+                        view.sequence, view.uptime_ms));
+                }
             }
         }
     }
