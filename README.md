@@ -13,8 +13,8 @@ ESP32-P4 center controller and two ESP32-S3 side displays.
 ## Architecture
 
 The P4 owns CAN decoding, vehicle state, settings, warnings, logging, odometer,
-Air Ride, and Climate routing. Each display S3 receives normalized state from a
-dedicated UART and only renders its assigned content. The existing rotary
+Air Ride, and Climate routing. Each display S3 receives normalized state over a
+dedicated one-way UART link and only renders its assigned content. The existing rotary
 controller remains a separate control surface connected to the P4.
 
 ```text
@@ -24,9 +24,10 @@ controller remains a separate control surface connected to the P4.
                   |  Center P4    |
                   |  authority    |
                   +---+-------+---+
-              UART-L |       | UART-R
+       GPIO30 TX only |       | GPIO31 TX only
             +--------v-+   +-v--------+
             | Left S3  |   | Right S3 |
+            | GPIO44 RX|   | GPIO44 RX|
             | display  |   | display  |
             +----------+   +----------+
 ```
@@ -37,6 +38,8 @@ controller remains a separate control surface connected to the P4.
 - `apps/left_s3`: left 480x480 display node.
 - `apps/right_s3`: right 480x480 display node.
 - `components/cluster_protocol`: framed UART protocol with CRC and heartbeat.
+- `components/cluster_uart`: simplex UART framing and stream resynchronization.
+- `components/cluster_board_config`: shared board pin and baud-rate contract.
 - `components/vehicle_data`: normalized cross-device vehicle state.
 - `components/settings_schema`: shared screen and gauge assignments.
 

@@ -20,8 +20,6 @@ typedef enum {
     CLUSTER_MSG_VEHICLE_SLOW = 0x03,
     CLUSTER_MSG_WARNINGS = 0x04,
     CLUSTER_MSG_SETTINGS = 0x05,
-    CLUSTER_MSG_DISPLAY_HEALTH = 0x80,
-    CLUSTER_MSG_ACK = 0x81,
 } cluster_message_type_t;
 
 typedef enum {

@@ -9,16 +9,19 @@ connect to CAN and do not persist authoritative settings.
 
 ## Links
 
-The P4 uses one dedicated full-duplex UART per side display. Each link carries:
+The P4 uses one dedicated simplex UART transmitter per side display. Both links
+carry the same authoritative state from P4 TX to S3 RX:
 
 - A periodic heartbeat.
 - Fast vehicle state at a target 50 Hz.
 - Slow status and warning state at 5-10 Hz.
 - Screen assignments and settings revisions on change.
-- Display health and acknowledgement messages back to the P4.
 
 A side display must mark data stale after 250 ms and show an offline state after
 1000 ms without a valid frame. Invalid length, version, or CRC frames are dropped.
+There is no S3-to-P4 return wire, so acknowledgements and display-health telemetry
+are not part of this transport. Sequence gaps and local receive timeouts provide
+the side-display diagnostics.
 
 ## Rendering
 
