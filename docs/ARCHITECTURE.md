@@ -11,11 +11,14 @@ The right S3 owns the Air Ride radio bridge (a private component). It may
 transmit a local hold command only while both P4 heartbeat and Air Ride
 telemetry are live. Loss of either link disarms controls and releases the valves.
 
-Both side S3 displays run the same five pages from `components/side_pages`:
-Data, Gauges, Speedometer, Air Ride and Climate. Swiping cycles through them in
-that order, and the knob can put any of them on either display. The Data page
-shows three values and the Gauges page a 2x3 grid; each display has its own
-channel choices, set from the phone settings page. The right S3 drives the Air
+Both side S3 displays run the same eight pages from `components/side_pages`:
+Data, Gauges, Trends, Peaks, Timer, Speedometer, Air Ride and Climate. Swiping
+cycles through them in that order, and the knob can put any of them on either
+display. Data shows three values, Gauges a 2x3 grid and Trends two values
+graphed over 20 seconds; each display has its own channel choices, set from the
+phone settings page. Peaks holds session maxima and Timer measures 0-30, 0-60,
+1/8 and 1/4 mile from the P4's sample timestamps; hold either screen to reset.
+Data-driven pages keep tracking while off screen. The right S3 drives the Air
 Ride radio directly; the left S3 shows the same readings relayed by the P4 and
 sends its touch commands through the P4, which applies the same checks as phone
 commands.

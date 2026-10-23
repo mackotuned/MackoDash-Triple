@@ -64,11 +64,15 @@ ASSET(main_0_screen); ASSET(main_1_rec); ASSET(main_2_air);
 ASSET(main_3_climate); ASSET(main_4_logs); ASSET(main_5_bright);
 ASSET(screen_target_0_left); ASSET(screen_target_1_center);
 ASSET(screen_target_2_right); ASSET(screen_target_3_back);
-ASSET(screen_source_0_tach); ASSET(screen_source_0_speedo);
-ASSET(screen_source_1_data); ASSET(screen_source_1_air);
-ASSET(screen_source_2_gauges); ASSET(screen_source_2_logs);
-ASSET(screen_source_3_air); ASSET(screen_source_3_back);
-ASSET(screen_source_4_climate); ASSET(screen_source_5_back);
+/* Center display picker. */
+ASSET(screen_source_0_tach); ASSET(screen_source_1_air);
+ASSET(screen_source_2_logs); ASSET(screen_source_3_back);
+/* Side display picker, in swipe order. */
+ASSET(screen_source_0_data); ASSET(screen_source_1_gauges);
+ASSET(screen_source_2_trends); ASSET(screen_source_3_peaks);
+ASSET(screen_source_4_timer); ASSET(screen_source_5_speedo);
+ASSET(screen_source_6_air); ASSET(screen_source_7_climate);
+ASSET(screen_source_8_back);
 ASSET(rec_idle); ASSET(rec_active);
 ASSET(air_0_all); ASSET(air_1_front); ASSET(air_2_rear); ASSET(air_3_fl);
 ASSET(air_4_fr); ASSET(air_5_rl); ASSET(air_6_rr); ASSET(air_7_back);
@@ -145,14 +149,26 @@ static const themed_asset_t SCREEN_TARGET_ASSETS[4] = {
     THEMED(screen_target_2_right), THEMED(screen_target_3_back),
 };
 /* "Show on screen" menus: the views each display offers, then BACK. */
-#define SCREEN_SOURCE_MAX_VIEWS 5
+#define SCREEN_SOURCE_MAX_VIEWS 8
 typedef struct {
     int view_count;
     cluster_display_view_t views[SCREEN_SOURCE_MAX_VIEWS];
     themed_asset_t assets[SCREEN_SOURCE_MAX_VIEWS + 1];
 } screen_source_menu_t;
 
-#define SIDE_SOURCE_MENU {                                                       .view_count = 5,                                                             .views = {CLUSTER_VIEW_SPEEDOMETER, CLUSTER_VIEW_DATA,                                 CLUSTER_VIEW_GAUGES, CLUSTER_VIEW_AIR_RIDE,                                  CLUSTER_VIEW_CLIMATE},                                             .assets = {THEMED(screen_source_0_speedo), THEMED(screen_source_1_data),                THEMED(screen_source_2_gauges), THEMED(screen_source_3_air),                 THEMED(screen_source_4_climate), THEMED(screen_source_5_back)}, }
+/* Same order as swiping on the side displays. */
+#define SIDE_SOURCE_MENU {                                                  \
+    .view_count = 8,                                                        \
+    .views = {CLUSTER_VIEW_DATA, CLUSTER_VIEW_GAUGES, CLUSTER_VIEW_TRENDS,  \
+              CLUSTER_VIEW_PEAKS, CLUSTER_VIEW_TIMER,                       \
+              CLUSTER_VIEW_SPEEDOMETER, CLUSTER_VIEW_AIR_RIDE,              \
+              CLUSTER_VIEW_CLIMATE},                                        \
+    .assets = {THEMED(screen_source_0_data), THEMED(screen_source_1_gauges), \
+               THEMED(screen_source_2_trends), THEMED(screen_source_3_peaks), \
+               THEMED(screen_source_4_timer), THEMED(screen_source_5_speedo), \
+               THEMED(screen_source_6_air), THEMED(screen_source_7_climate), \
+               THEMED(screen_source_8_back)},                               \
+}
 static const screen_source_menu_t SCREEN_SOURCE_MENUS[CLUSTER_DISPLAY_COUNT] = {
     [CLUSTER_DISPLAY_LEFT] = SIDE_SOURCE_MENU,
     [CLUSTER_DISPLAY_CENTER] = {

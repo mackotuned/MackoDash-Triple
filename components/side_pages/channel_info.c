@@ -183,3 +183,123 @@ uint32_t side_channel_color(const cluster_vehicle_fast_t *vehicle,
     }
     return COLOR_WHITE;
 }
+
+bool side_channel_value_tenths(const cluster_vehicle_fast_t *vehicle,
+                               uint8_t channel, int32_t *value)
+{
+    if (!vehicle_data_channel_valid(vehicle->valid_channels, channel)) {
+        return false;
+    }
+    switch ((vehicle_data_channel_t)channel) {
+    case VEHICLE_DATA_RPM: *value = (int32_t)vehicle->rpm * 10; break;
+    case VEHICLE_DATA_SPEED:
+        *value = (int32_t)(((uint64_t)vehicle->speed_tenths_kph * 621371U +
+                            500000U) / 1000000U);
+        break;
+    case VEHICLE_DATA_BOOST:
+        /* Signed PSI: vacuum plots below zero. */
+        *value = ((int32_t)vehicle->boost_tenths_kpa * 14504) / 100000;
+        break;
+    case VEHICLE_DATA_COOLANT_TEMP:
+        *value = side_tenths_c_to_tenths_f(vehicle->coolant_tenths_c);
+        break;
+    case VEHICLE_DATA_INTAKE_TEMP:
+        *value = side_tenths_c_to_tenths_f(vehicle->intake_tenths_c);
+        break;
+    case VEHICLE_DATA_AFR: *value = vehicle->afr_thousandths / 100; break;
+    case VEHICLE_DATA_OIL_PRESSURE:
+        *value = ((int32_t)vehicle->oil_pressure_tenths_kpa * 14504) / 100000;
+        break;
+    case VEHICLE_DATA_FUEL_PRESSURE:
+        *value = ((int32_t)vehicle->fuel_pressure_tenths_kpa * 14504) / 100000;
+        break;
+    case VEHICLE_DATA_BATTERY: *value = vehicle->battery_mv / 100; break;
+    case VEHICLE_DATA_THROTTLE: *value = vehicle->throttle_tenths_percent; break;
+    case VEHICLE_DATA_FUEL_LEVEL:
+        *value = vehicle->fuel_level_tenths_percent;
+        break;
+    case VEHICLE_DATA_IGNITION: *value = (int32_t)vehicle->ignition_deg * 10; break;
+    case VEHICLE_DATA_ETHANOL: *value = vehicle->ethanol_tenths_percent; break;
+    case VEHICLE_DATA_KNOCK: *value = (int32_t)vehicle->knock_count * 10; break;
+    default: return false;
+    }
+    return true;
+}
+
+void side_channel_range_tenths(uint8_t channel, int32_t *minimum,
+                               int32_t *maximum)
+{
+    static const int16_t ranges[VEHICLE_DATA_COUNT][2] = {
+        [VEHICLE_DATA_RPM] = {0, 9000},       /* x10 below */
+        [VEHICLE_DATA_SPEED] = {0, 1600},
+        [VEHICLE_DATA_BOOST] = {-150, 300},
+        [VEHICLE_DATA_COOLANT_TEMP] = {1000, 2600},
+        [VEHICLE_DATA_INTAKE_TEMP] = {400, 2000},
+        [VEHICLE_DATA_AFR] = {100, 200},
+        [VEHICLE_DATA_OIL_PRESSURE] = {0, 1000},
+        [VEHICLE_DATA_FUEL_PRESSURE] = {0, 800},
+        [VEHICLE_DATA_BATTERY] = {100, 160},
+        [VEHICLE_DATA_THROTTLE] = {0, 1000},
+        [VEHICLE_DATA_FUEL_LEVEL] = {0, 1000},
+        [VEHICLE_DATA_IGNITION] = {-100, 500},
+        [VEHICLE_DATA_ETHANOL] = {0, 1000},
+        [VEHICLE_DATA_KNOCK] = {0, 200},
+    };
+    if (channel >= VEHICLE_DATA_COUNT) {
+        *minimum = 0;
+        *maximum = 1000;
+        return;
+    }
+    const int32_t scale = channel == VEHICLE_DATA_RPM ? 10 : 1;
+    *minimum = ranges[channel][0] * scale;
+    *maximum = ranges[channel][1] * scale;
+}
+
+const side_palette_t *side_palette(bool graphite)
+{
+    static const side_palette_t classic = {
+        .background = 0x000000, .panel = 0x0C0C0D, .border = 0x2C2C2F,
+        .text = 0xECECE7, .dim = 0x9A9A96, .accent = 0xE81E1E,
+        .accent2 = 0xEC5C28, .grid = 0x19191B,
+    };
+    static const side_palette_t graphite_palette = {
+        .background = 0x0B0E11, .panel = 0x12171C, .border = 0x26323C,
+        .text = 0xEEF0F2, .dim = 0x8A97A3, .accent = 0x5EC8F2,
+        .accent2 = 0xE8EDF2, .grid = 0x18212A,
+    };
+    return graphite ? &graphite_palette : &classic;
+}
+
+lv_obj_t *side_offline_ring_create(lv_obj_t *screen)
+{
+    lv_obj_t *ring = lv_obj_create(screen);
+    lv_obj_set_size(ring, 472, 472);
+    lv_obj_center(ring);
+    lv_obj_set_style_radius(ring, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(ring, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_border_width(ring, 6, LV_PART_MAIN);
+    lv_obj_set_style_border_color(ring, lv_color_hex(0x84868DU), LV_PART_MAIN);
+    lv_obj_set_clickable(ring, false);
+    return ring;
+}
+
+lv_obj_t *side_panel_create(lv_obj_t *parent, int32_t x, int32_t y,
+                            int32_t width, int32_t height)
+{
+    lv_obj_t *panel = lv_obj_create(parent);
+    lv_obj_set_pos(panel, x, y);
+    lv_obj_set_size(panel, width, height);
+    lv_obj_set_style_radius(panel, 12, LV_PART_MAIN);
+    lv_obj_set_style_border_width(panel, 2, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(panel, 0, LV_PART_MAIN);
+    lv_obj_set_scrollable(panel, false);
+    lv_obj_set_clickable(panel, false);
+    return panel;
+}
+
+void side_panel_style(lv_obj_t *panel, const side_palette_t *palette)
+{
+    lv_obj_set_style_bg_color(panel, lv_color_hex(palette->panel), LV_PART_MAIN);
+    lv_obj_set_style_border_color(panel, lv_color_hex(palette->border),
+                                  LV_PART_MAIN);
+}

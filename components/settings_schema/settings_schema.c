@@ -39,6 +39,13 @@ static const vehicle_data_channel_t right_gauge_defaults[CLUSTER_GAUGE_SLOT_COUN
     VEHICLE_DATA_KNOCK, VEHICLE_DATA_FUEL_PRESSURE, VEHICLE_DATA_FUEL_LEVEL,
 };
 
+static const vehicle_data_channel_t left_trend_defaults[CLUSTER_TREND_SLOT_COUNT] = {
+    VEHICLE_DATA_BOOST, VEHICLE_DATA_AFR,
+};
+static const vehicle_data_channel_t right_trend_defaults[CLUSTER_TREND_SLOT_COUNT] = {
+    VEHICLE_DATA_RPM, VEHICLE_DATA_THROTTLE,
+};
+
 /* Replaces out-of-range channel selections with their defaults. */
 static bool validate_channels(vehicle_data_channel_t *channels,
                               const vehicle_data_channel_t *defaults,
@@ -63,6 +70,10 @@ void cluster_settings_set_layout_defaults(cluster_settings_t *settings)
            sizeof(left_gauge_defaults));
     memcpy(layout->right_gauge_channels, right_gauge_defaults,
            sizeof(right_gauge_defaults));
+    memcpy(layout->left_trend_channels, left_trend_defaults,
+           sizeof(left_trend_defaults));
+    memcpy(layout->right_trend_channels, right_trend_defaults,
+           sizeof(right_trend_defaults));
 }
 
 static uint16_t clamp_u16(uint16_t value, uint16_t minimum, uint16_t maximum)
@@ -232,5 +243,11 @@ bool cluster_settings_validate(cluster_settings_t *settings)
     unchanged &= validate_channels(layout->right_gauge_channels,
                                    right_gauge_defaults,
                                    CLUSTER_GAUGE_SLOT_COUNT);
+    unchanged &= validate_channels(layout->left_trend_channels,
+                                   left_trend_defaults,
+                                   CLUSTER_TREND_SLOT_COUNT);
+    unchanged &= validate_channels(layout->right_trend_channels,
+                                   right_trend_defaults,
+                                   CLUSTER_TREND_SLOT_COUNT);
     return unchanged;
 }

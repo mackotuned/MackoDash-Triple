@@ -349,6 +349,10 @@ cluster_protocol_result_t cluster_left_settings_encode(
            sizeof(settings->left_gauge_channels));
     memcpy(&payload[51], settings->right_gauge_channels,
            sizeof(settings->right_gauge_channels));
+    memcpy(&payload[57], settings->left_trend_channels,
+           sizeof(settings->left_trend_channels));
+    memcpy(&payload[59], settings->right_trend_channels,
+           sizeof(settings->right_trend_channels));
     return CLUSTER_PROTOCOL_OK;
 }
 
@@ -393,6 +397,10 @@ cluster_protocol_result_t cluster_left_settings_decode(
            sizeof(settings->left_gauge_channels));
     memcpy(settings->right_gauge_channels, &payload[51],
            sizeof(settings->right_gauge_channels));
+    memcpy(settings->left_trend_channels, &payload[57],
+           sizeof(settings->left_trend_channels));
+    memcpy(settings->right_trend_channels, &payload[59],
+           sizeof(settings->right_trend_channels));
     return CLUSTER_PROTOCOL_OK;
 }
 

@@ -1351,6 +1351,11 @@ function buildSystem(p) {
       return select('screenLayout.' + side + 'ValueChannels.' + i, label, channels);
     });
   }
+  function trendSlots(side) {
+    return ['Line 1 (accent)', 'Line 2'].map(function (label, i) {
+      return select('screenLayout.' + side + 'TrendChannels.' + i, label, channels);
+    });
+  }
   function gaugeSlots(side) {
     return ['Top left', 'Top right', 'Middle left', 'Middle right', 'Bottom left', 'Bottom right'].map(function (label, i) {
       return select('screenLayout.' + side + 'GaugeChannels.' + i, label, channels);
@@ -1365,7 +1370,9 @@ function buildSystem(p) {
     card('Left · Data page', dataSlots('left'), 'Large value and the two below it'),
     card('Right · Data page', dataSlots('right'), 'Large value and the two below it'),
     card('Left · Gauges page', gaugeSlots('left'), 'Six-value grid'),
-    card('Right · Gauges page', gaugeSlots('right'), 'Six-value grid')
+    card('Right · Gauges page', gaugeSlots('right'), 'Six-value grid'),
+    card('Left · Trends page', trendSlots('left'), 'Two values graphed over 20 seconds'),
+    card('Right · Trends page', trendSlots('right'), 'Two values graphed over 20 seconds')
   ])));
   var info = {};
   ['Settings revision', 'Schema version', 'Requests OK', 'Requests failed'].forEach(function (k) { info[k] = h('b', { text: '--' }); });

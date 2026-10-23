@@ -284,6 +284,12 @@ static cJSON *settings_to_json(const cluster_settings_t *settings)
     JSON_ADD_ARRAY(screen_layout, "rightGaugeChannels",
                    settings->screen_layout.right_gauge_channels,
                    CLUSTER_GAUGE_SLOT_COUNT);
+    JSON_ADD_ARRAY(screen_layout, "leftTrendChannels",
+                   settings->screen_layout.left_trend_channels,
+                   CLUSTER_TREND_SLOT_COUNT);
+    JSON_ADD_ARRAY(screen_layout, "rightTrendChannels",
+                   settings->screen_layout.right_trend_channels,
+                   CLUSTER_TREND_SLOT_COUNT);
     cJSON_AddBoolToObject(screen_layout, "rightBatteryEnabled",
                           settings->screen_layout.right_battery_enabled);
     cJSON *simulation = cJSON_AddObjectToObject(root, "simulation");
@@ -406,6 +412,12 @@ static bool apply_patch(cluster_settings_t *settings, const char *key,
         {"screenLayout.rightGaugeChannels.",
          offsetof(cluster_screen_layout_settings_t, right_gauge_channels),
          CLUSTER_GAUGE_SLOT_COUNT},
+        {"screenLayout.leftTrendChannels.",
+         offsetof(cluster_screen_layout_settings_t, left_trend_channels),
+         CLUSTER_TREND_SLOT_COUNT},
+        {"screenLayout.rightTrendChannels.",
+         offsetof(cluster_screen_layout_settings_t, right_trend_channels),
+         CLUSTER_TREND_SLOT_COUNT},
     };
     for (size_t list = 0; list < sizeof(channel_lists) / sizeof(channel_lists[0]);
          ++list) {

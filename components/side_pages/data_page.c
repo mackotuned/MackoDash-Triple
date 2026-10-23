@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "dash_fonts.h"
 #include "settings_schema.h"
@@ -239,7 +240,7 @@ static void render(const cluster_vehicle_fast_t *vehicle)
     }
 }
 
-void data_page_create(lv_obj_t *screen)
+static void data_page_create(lv_obj_t *screen)
 {
     lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
@@ -285,9 +286,14 @@ void data_page_create(lv_obj_t *screen)
     lv_obj_set_clickable(offline_overlay, false);
 }
 
-void data_page_apply_settings(const cluster_left_settings_t *new_settings)
+static void data_page_apply_settings(const cluster_left_settings_t *new_settings,
+                                     cluster_display_target_t display)
 {
     settings = *new_settings;
+    if (display == CLUSTER_DISPLAY_RIGHT) {
+        memcpy(settings.value_channels, new_settings->right_value_channels,
+               sizeof(settings.value_channels));
+    }
     const bool graphite = graphite_theme();
     face_image.data = graphite ? graphite_side_face_rgb565_start
                                : side_face_rgb565_start;
@@ -311,14 +317,21 @@ void data_page_apply_settings(const cluster_left_settings_t *new_settings)
     }
 }
 
-void data_page_update(const cluster_vehicle_fast_t *vehicle)
+static void data_page_update(const cluster_vehicle_fast_t *vehicle)
 {
     latest_vehicle = *vehicle;
     latest_vehicle_valid = true;
     render(vehicle);
 }
 
-void data_page_set_offline(bool offline)
+static void data_page_set_offline(bool offline)
 {
     lv_obj_set_hidden(offline_overlay, !offline);
 }
+
+const side_page_ops_t data_page_ops = {
+    .create = data_page_create,
+    .apply_settings = data_page_apply_settings,
+    .update = data_page_update,
+    .set_offline = data_page_set_offline,
+};

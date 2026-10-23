@@ -153,28 +153,40 @@
     "screen_source": {
       "left": [
         {
-          "id": "speedo",
-          "image": "screen_source_0_speedo"
-        },
-        {
           "id": "data",
-          "image": "screen_source_1_data"
+          "image": "screen_source_0_data"
         },
         {
           "id": "gauges",
-          "image": "screen_source_2_gauges"
+          "image": "screen_source_1_gauges"
+        },
+        {
+          "id": "trends",
+          "image": "screen_source_2_trends"
+        },
+        {
+          "id": "peaks",
+          "image": "screen_source_3_peaks"
+        },
+        {
+          "id": "timer",
+          "image": "screen_source_4_timer"
+        },
+        {
+          "id": "speedo",
+          "image": "screen_source_5_speedo"
         },
         {
           "id": "air",
-          "image": "screen_source_3_air"
+          "image": "screen_source_6_air"
         },
         {
           "id": "climate",
-          "image": "screen_source_4_climate"
+          "image": "screen_source_7_climate"
         },
         {
           "id": "back",
-          "image": "screen_source_5_back"
+          "image": "screen_source_8_back"
         }
       ],
       "center": [
@@ -197,28 +209,40 @@
       ],
       "right": [
         {
-          "id": "speedo",
-          "image": "screen_source_0_speedo"
-        },
-        {
           "id": "data",
-          "image": "screen_source_1_data"
+          "image": "screen_source_0_data"
         },
         {
           "id": "gauges",
-          "image": "screen_source_2_gauges"
+          "image": "screen_source_1_gauges"
+        },
+        {
+          "id": "trends",
+          "image": "screen_source_2_trends"
+        },
+        {
+          "id": "peaks",
+          "image": "screen_source_3_peaks"
+        },
+        {
+          "id": "timer",
+          "image": "screen_source_4_timer"
+        },
+        {
+          "id": "speedo",
+          "image": "screen_source_5_speedo"
         },
         {
           "id": "air",
-          "image": "screen_source_3_air"
+          "image": "screen_source_6_air"
         },
         {
           "id": "climate",
-          "image": "screen_source_4_climate"
+          "image": "screen_source_7_climate"
         },
         {
           "id": "back",
-          "image": "screen_source_5_back"
+          "image": "screen_source_8_back"
         }
       ]
     }

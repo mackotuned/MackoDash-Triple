@@ -13,15 +13,41 @@
 
 #define LOCK_TIMEOUT_MS 100
 
-/* Swipe order. */
+/* Swipe order. The data-driven pages come first. */
 typedef enum {
     PAGE_DATA,
     PAGE_GAUGES,
+    PAGE_TRENDS,
+    PAGE_PEAKS,
+    PAGE_TIMER,
     PAGE_SPEEDOMETER,
     PAGE_AIR_RIDE,
     PAGE_CLIMATE,
     PAGE_COUNT,
 } side_page_t;
+
+static const side_page_ops_t *const data_pages[] = {
+    [PAGE_DATA] = &data_page_ops,
+    [PAGE_GAUGES] = &gauges_page_ops,
+    [PAGE_TRENDS] = &trends_page_ops,
+    [PAGE_PEAKS] = &peaks_page_ops,
+    [PAGE_TIMER] = &timer_page_ops,
+};
+#define DATA_PAGE_COUNT (sizeof(data_pages) / sizeof(data_pages[0]))
+
+static const struct {
+    cluster_display_view_t view;
+    side_page_t page;
+} view_pages[] = {
+    {CLUSTER_VIEW_DATA, PAGE_DATA},
+    {CLUSTER_VIEW_GAUGES, PAGE_GAUGES},
+    {CLUSTER_VIEW_TRENDS, PAGE_TRENDS},
+    {CLUSTER_VIEW_PEAKS, PAGE_PEAKS},
+    {CLUSTER_VIEW_TIMER, PAGE_TIMER},
+    {CLUSTER_VIEW_SPEEDOMETER, PAGE_SPEEDOMETER},
+    {CLUSTER_VIEW_AIR_RIDE, PAGE_AIR_RIDE},
+    {CLUSTER_VIEW_CLIMATE, PAGE_CLIMATE},
+};
 
 static const side_pages_config_t *config;
 static lv_obj_t *screens[PAGE_COUNT];
@@ -55,21 +81,22 @@ void side_pages_label_set_text(lv_obj_t *label, const char *text)
 
 static bool page_for_view(cluster_display_view_t view, side_page_t *result)
 {
-    switch (view) {
-    case CLUSTER_VIEW_DATA: *result = PAGE_DATA; return true;
-    case CLUSTER_VIEW_GAUGES: *result = PAGE_GAUGES; return true;
-    case CLUSTER_VIEW_SPEEDOMETER: *result = PAGE_SPEEDOMETER; return true;
-    case CLUSTER_VIEW_AIR_RIDE: *result = PAGE_AIR_RIDE; return true;
-    case CLUSTER_VIEW_CLIMATE: *result = PAGE_CLIMATE; return true;
-    default: return false;
+    for (size_t index = 0; index < sizeof(view_pages) / sizeof(view_pages[0]);
+         ++index) {
+        if (view_pages[index].view == view) {
+            *result = view_pages[index].page;
+            return true;
+        }
     }
+    return false;
 }
 
 static void update_offline_locked(void)
 {
     const bool offline = !side_pages_center_online();
-    data_page_set_offline(offline);
-    gauges_page_set_offline(offline);
+    for (size_t index = 0; index < DATA_PAGE_COUNT; ++index) {
+        data_pages[index]->set_offline(offline);
+    }
     side_speedometer_set_offline(offline, offline_rgb);
     climate_display_set_offline(offline);
 }
@@ -107,10 +134,10 @@ static void page_swipe_event(lv_event_t *event)
 void side_pages_create(lv_obj_t *screen, void *context)
 {
     config = context;
-    screens[PAGE_DATA] = screen;
-    data_page_create(screens[PAGE_DATA]);
-    screens[PAGE_GAUGES] = lv_obj_create(NULL);
-    gauges_page_create(screens[PAGE_GAUGES]);
+    for (size_t index = 0; index < DATA_PAGE_COUNT; ++index) {
+        screens[index] = index == PAGE_DATA ? screen : lv_obj_create(NULL);
+        data_pages[index]->create(screens[index]);
+    }
     screens[PAGE_SPEEDOMETER] = lv_obj_create(NULL);
     side_speedometer_create(screens[PAGE_SPEEDOMETER]);
     screens[PAGE_AIR_RIDE] = lv_obj_create(NULL);
@@ -158,17 +185,10 @@ void side_pages_apply_settings(const cluster_left_settings_t *settings)
                                                  : settings->brightness));
     if (side_display_lock(LOCK_TIMEOUT_MS) != ESP_OK) return;
     const bool graphite = settings->theme == CLUSTER_THEME_GRAPHITE;
-    const bool right = config->display == CLUSTER_DISPLAY_RIGHT;
     offline_rgb = settings->offline_rgb;
-    /* The data page reads value_channels; give it this display's slots. */
-    cluster_left_settings_t page_settings = *settings;
-    if (right) {
-        memcpy(page_settings.value_channels, settings->right_value_channels,
-               sizeof(page_settings.value_channels));
+    for (size_t index = 0; index < DATA_PAGE_COUNT; ++index) {
+        data_pages[index]->apply_settings(settings, config->display);
     }
-    data_page_apply_settings(&page_settings);
-    gauges_page_apply_settings(settings, right ? settings->right_gauge_channels
-                                               : settings->left_gauge_channels);
     air_page_set_graphite(graphite);
     side_speedometer_set_graphite(graphite);
     side_speedometer_set_accent(settings->tach_rgb);
@@ -184,7 +204,10 @@ void side_pages_update_vehicle(const cluster_vehicle_fast_t *vehicle)
         vehicle_data_channel_valid(vehicle->valid_channels,
                                    VEHICLE_DATA_SPEED));
     if (side_display_lock(LOCK_TIMEOUT_MS) != ESP_OK) return;
-    data_page_update(vehicle);
-    gauges_page_update(vehicle);
+    /* Every data page keeps tracking (peaks, timer, trend history) even
+     * while another page is on screen. */
+    for (size_t index = 0; index < DATA_PAGE_COUNT; ++index) {
+        data_pages[index]->update(vehicle);
+    }
     side_display_unlock();
 }

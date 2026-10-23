@@ -208,6 +208,30 @@ def ic_gauge(p, red_zone=False, ticks=9, ink="w"):
     p.dot(0, 4, 7, ink)
 
 
+def ic_trend(p):
+    """Chart axes with a live trace; the newest point is highlighted."""
+    p.line([(-40, -38), (-40, 30), (40, 30)], 5)
+    trace = [(-32, 12), (-17, -6), (-3, 6), (13, -22), (30, -10)]
+    p.line(trace, 6, "r")
+    p.dot(30, -10, 7, "r")
+
+
+def ic_peak(p):
+    """A summit with a flag on top."""
+    p.line([(-42, 30), (-14, -16), (0, 4), (16, -32), (42, 30)], 6)
+    p.line([(16, -32), (16, -48)], 4.5, "r")
+    p.poly([(16, -48), (34, -42), (16, -36)], "r")
+
+
+def ic_stopwatch(p):
+    """Stopwatch with the hand mid-sweep."""
+    p.ring(0, 8, 34, 6)
+    p.rrect(-9, -44, 9, -34, 3, 5, fill=True)
+    p.line([(0, -34), (0, -26)], 5)
+    p.line([(0, 8), (17, -9)], 6, "r")
+    p.dot(0, 8, 6)
+
+
 def ic_grid(p):
     """Six value tiles in two columns, one highlighted like a live reading."""
     for row in range(3):
@@ -360,6 +384,9 @@ ICON_FUNCS = {
     "speedo": lambda L, p, *a: ic_gauge(p, False, 11),
     "data": lambda L, p, *a: ic_thermo(p, 0.5),
     "gauges": lambda L, p, *a: ic_grid(p),
+    "trends": lambda L, p, *a: ic_trend(p),
+    "peaks": lambda L, p, *a: ic_peak(p),
+    "timer": lambda L, p, *a: ic_stopwatch(p),
     "car_all": lambda L, p, *a: ic_car(p, ("fl", "fr", "rl", "rr")),
     "car_front": lambda L, p, *a: ic_car(p, ("fl", "fr")),
     "car_rear": lambda L, p, *a: ic_car(p, ("rl", "rr")),
@@ -491,14 +518,16 @@ def main():
             layout["menus"][menu].append(dict(id=key, image=fn))
 
     source_menus = {
-        "left": [("speedo", "speedo", "SPEEDO"), ("data", "data", "DATA"),
-                 ("gauges", "gauges", "GAUGES"),
+        "left": [("data", "data", "DATA"), ("gauges", "gauges", "GAUGES"),
+                 ("trends", "trends", "TRENDS"), ("peaks", "peaks", "PEAKS"),
+                 ("timer", "timer", "TIMER"), ("speedo", "speedo", "SPEEDO"),
                  ("air", "air", "AIR RIDE"), ("climate", "climate", "CLIMATE"),
                  ("back", "back", "BACK")],
         "center": [("tach", "tach", "TACH"), ("air", "air", "AIR RIDE"),
                    ("logs", "logs", "LOGS"), ("back", "back", "BACK")],
-        "right": [("speedo", "speedo", "SPEEDO"), ("data", "data", "DATA"),
-                  ("gauges", "gauges", "GAUGES"),
+        "right": [("data", "data", "DATA"), ("gauges", "gauges", "GAUGES"),
+                  ("trends", "trends", "TRENDS"), ("peaks", "peaks", "PEAKS"),
+                  ("timer", "timer", "TIMER"), ("speedo", "speedo", "SPEEDO"),
                   ("air", "air", "AIR RIDE"), ("climate", "climate", "CLIMATE"),
                   ("back", "back", "BACK")],
     }

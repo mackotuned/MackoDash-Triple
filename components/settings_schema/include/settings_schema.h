@@ -17,6 +17,7 @@ extern "C" {
 #define CLUSTER_AIR_RIDE_PRESET_COUNT 6U
 #define CLUSTER_LEFT_VALUE_SLOT_COUNT 3U
 #define CLUSTER_GAUGE_SLOT_COUNT 6U
+#define CLUSTER_TREND_SLOT_COUNT 2U
 
 typedef enum {
     CLUSTER_SCREEN_CENTER = 0,
@@ -90,6 +91,8 @@ typedef struct {
     vehicle_data_channel_t right_value_channels[CLUSTER_LEFT_VALUE_SLOT_COUNT];
     vehicle_data_channel_t left_gauge_channels[CLUSTER_GAUGE_SLOT_COUNT];
     vehicle_data_channel_t right_gauge_channels[CLUSTER_GAUGE_SLOT_COUNT];
+    vehicle_data_channel_t left_trend_channels[CLUSTER_TREND_SLOT_COUNT];
+    vehicle_data_channel_t right_trend_channels[CLUSTER_TREND_SLOT_COUNT];
 } cluster_screen_layout_settings_t;
 
 typedef struct {

@@ -20,9 +20,10 @@ extern "C" {
 #define CLUSTER_VEHICLE_FAST_PAYLOAD_VERSION 3U
 #define CLUSTER_VEHICLE_FAST_PAYLOAD_SIZE 42U
 #define CLUSTER_LEFT_SETTINGS_PAYLOAD_VERSION 4U
-#define CLUSTER_LEFT_SETTINGS_PAYLOAD_SIZE 57U
+#define CLUSTER_LEFT_SETTINGS_PAYLOAD_SIZE 61U
 #define CLUSTER_DATA_SLOT_COUNT 3U
 #define CLUSTER_GAUGE_SLOT_COUNT 6U
+#define CLUSTER_TREND_SLOT_COUNT 2U
 #define CLUSTER_KNOB_COMMAND_PAYLOAD_VERSION 1U
 #define CLUSTER_KNOB_COMMAND_PAYLOAD_SIZE 8U
 #define CLUSTER_DISPLAY_MODE_PAYLOAD_VERSION 1U
@@ -82,6 +83,9 @@ typedef enum {
     CLUSTER_VIEW_LOGS = 4,
     CLUSTER_VIEW_CLIMATE = 5,
     CLUSTER_VIEW_GAUGES = 6,
+    CLUSTER_VIEW_TRENDS = 7,
+    CLUSTER_VIEW_PEAKS = 8,
+    CLUSTER_VIEW_TIMER = 9,
     CLUSTER_VIEW_COUNT,
 } cluster_display_view_t;
 
@@ -209,6 +213,8 @@ typedef struct {
     uint8_t right_value_channels[CLUSTER_DATA_SLOT_COUNT];
     uint8_t left_gauge_channels[CLUSTER_GAUGE_SLOT_COUNT];
     uint8_t right_gauge_channels[CLUSTER_GAUGE_SLOT_COUNT];
+    uint8_t left_trend_channels[CLUSTER_TREND_SLOT_COUNT];
+    uint8_t right_trend_channels[CLUSTER_TREND_SLOT_COUNT];
 } cluster_left_settings_t;
 
 /* Target dial positions, P4 to the climate gateway display. */
