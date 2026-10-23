@@ -181,6 +181,14 @@ def ic_gauge(p, red_zone=False, ticks=9, ink="w"):
     p.dot(0, 4, 7, ink)
 
 
+def ic_grid(p):
+    """Six value tiles in two columns, one highlighted like a live reading."""
+    for row in range(3):
+        for col in range(2):
+            x0, y0 = -38 + col * 40, -38 + row * 27
+            p.rrect(x0, y0, x0 + 34, y0 + 21, 5, 5.5, "r" if (row, col) == (0, 0) else "w")
+
+
 def ic_screens(p, sel=None):
     """Three round gauges side by side; sel = 0/1/2 highlights one in red."""
     for i, (x, y, r) in enumerate(((-37, 6, 14), (0, 0, 21), (37, 6, 14))):
@@ -324,6 +332,7 @@ ICON_FUNCS = {
     "tach": lambda L, p, *a: ic_gauge(p, True),
     "speedo": lambda L, p, *a: ic_gauge(p, False, 11),
     "data": lambda L, p, *a: ic_thermo(p, 0.5),
+    "gauges": lambda L, p, *a: ic_grid(p),
     "car_all": lambda L, p, *a: ic_car(p, ("fl", "fr", "rl", "rr")),
     "car_front": lambda L, p, *a: ic_car(p, ("fl", "fr")),
     "car_rear": lambda L, p, *a: ic_car(p, ("rl", "rr")),
@@ -461,11 +470,15 @@ def main():
 
     source_menus = {
         "left": [("speedo", "speedo", "SPEEDO"), ("data", "data", "DATA"),
-                 ("climate", "climate", "CLIMATE"), ("back", "back", "BACK")],
+                 ("gauges", "gauges", "GAUGES"),
+                 ("air", "air", "AIR RIDE"), ("climate", "climate", "CLIMATE"),
+                 ("back", "back", "BACK")],
         "center": [("tach", "tach", "TACH"), ("air", "air", "AIR RIDE"),
                    ("logs", "logs", "LOGS"), ("back", "back", "BACK")],
-        "right": [("speedo", "speedo", "SPEEDO"), ("air", "air", "AIR RIDE"),
-                  ("climate", "climate", "CLIMATE"), ("back", "back", "BACK")],
+        "right": [("speedo", "speedo", "SPEEDO"), ("data", "data", "DATA"),
+                  ("gauges", "gauges", "GAUGES"),
+                  ("air", "air", "AIR RIDE"), ("climate", "climate", "CLIMATE"),
+                  ("back", "back", "BACK")],
     }
     layout["menus"]["screen_source"] = {}
     generated_sources = set()

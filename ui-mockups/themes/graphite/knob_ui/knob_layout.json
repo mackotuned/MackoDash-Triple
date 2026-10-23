@@ -161,12 +161,20 @@
           "image": "screen_source_1_data"
         },
         {
+          "id": "gauges",
+          "image": "screen_source_2_gauges"
+        },
+        {
+          "id": "air",
+          "image": "screen_source_3_air"
+        },
+        {
           "id": "climate",
-          "image": "screen_source_2_climate"
+          "image": "screen_source_4_climate"
         },
         {
           "id": "back",
-          "image": "screen_source_3_back"
+          "image": "screen_source_5_back"
         }
       ],
       "center": [
@@ -193,16 +201,24 @@
           "image": "screen_source_0_speedo"
         },
         {
+          "id": "data",
+          "image": "screen_source_1_data"
+        },
+        {
+          "id": "gauges",
+          "image": "screen_source_2_gauges"
+        },
+        {
           "id": "air",
-          "image": "screen_source_1_air"
+          "image": "screen_source_3_air"
         },
         {
           "id": "climate",
-          "image": "screen_source_2_climate"
+          "image": "screen_source_4_climate"
         },
         {
           "id": "back",
-          "image": "screen_source_3_back"
+          "image": "screen_source_5_back"
         }
       ]
     }

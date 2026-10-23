@@ -36,20 +36,20 @@ def main() -> None:
         copy_png(GRAPHITE / "airctl" / "tiles" / f"{name}.png", center / "airctl" / f"graphite_{name}.png")
 
     rgb565(GRAPHITE / "side_480_round.png",
-           ROOT / "apps" / "left_s3" / "main" / "assets" / "graphite_side_480_rgb565.bin", (480, 480))
+           ROOT / "components" / "side_pages" / "assets" / "graphite_side_480_rgb565.bin", (480, 480))
     rgb565(GRAPHITE / "speedo_480_round.png",
            ROOT / "components" / "side_display" / "assets" / "graphite_speedo_480_rgb565.bin", (480, 480))
     rgb565(GRAPHITE / "climate480" / "climate_480_bg.png",
            ROOT / "components" / "climate_display" / "assets" / "graphite_climate_480_rgb565.bin", (480, 480))
     rgb565(GRAPHITE / "air_480_round.png",
-           ROOT / "apps" / "right_s3" / "main" / "assets" / "graphite_air_480_rgb565.bin", (480, 480))
+           ROOT / "components" / "side_pages" / "assets" / "graphite_air_480_rgb565.bin", (480, 480))
     rgb565(GRAPHITE / "airctl" / "control_480_bg.png",
-           ROOT / "apps" / "right_s3" / "main" / "assets" / "airctl" / "graphite_control_480_bg.bin", (480, 480))
+           ROOT / "components" / "side_pages" / "assets" / "airctl" / "graphite_control_480_bg.bin", (480, 480))
     for name in ("sel_all", "sel_front", "sel_rear", "sel_fl", "sel_fr", "sel_rl", "sel_rr",
                  "pressed_prev", "pressed_next", "pressed_up", "pressed_down", "pressed_airout", "pressed_exit"):
         source = GRAPHITE / "airctl" / "tiles" / f"{name}.png"
         image = Image.open(source)
-        rgb565(source, ROOT / "apps" / "right_s3" / "main" / "assets" / "airctl" / f"graphite_{name}.bin", image.size)
+        rgb565(source, ROOT / "components" / "side_pages" / "assets" / "airctl" / f"graphite_{name}.bin", image.size)
 
     knob_source = GRAPHITE / "knob_ui"
     knob_destination = ROOT / "apps" / "knob_s3" / "main" / "assets" / "rgb565"

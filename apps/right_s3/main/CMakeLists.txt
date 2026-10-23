@@ -1,29 +1,6 @@
 idf_component_register(
-    SRCS "main.c" "right_ui.c"
+    SRCS "main.c"
     INCLUDE_DIRS "."
-    REQUIRES air_ride_gateway climate_display cluster_board_config cluster_protocol cluster_wireless dash_fonts side_display vehicle_data settings_schema esp_timer
-    EMBED_FILES "assets/air_480_rgb565.bin"
-        "assets/graphite_air_480_rgb565.bin"
-        "assets/airctl/control_480_bg.bin"
-        "assets/airctl/graphite_control_480_bg.bin"
-        "assets/airctl/sel_all.bin" "assets/airctl/sel_front.bin"
-        "assets/airctl/sel_rear.bin" "assets/airctl/sel_fl.bin"
-        "assets/airctl/sel_fr.bin" "assets/airctl/sel_rl.bin"
-        "assets/airctl/sel_rr.bin"
-        "assets/airctl/pressed_prev.bin" "assets/airctl/pressed_next.bin"
-        "assets/airctl/pressed_up.bin" "assets/airctl/pressed_down.bin"
-        "assets/airctl/pressed_airout.bin" "assets/airctl/pressed_exit.bin"
-        "assets/airctl/graphite_sel_all.bin"
-        "assets/airctl/graphite_sel_front.bin"
-        "assets/airctl/graphite_sel_rear.bin"
-        "assets/airctl/graphite_sel_fl.bin"
-        "assets/airctl/graphite_sel_fr.bin"
-        "assets/airctl/graphite_sel_rl.bin"
-        "assets/airctl/graphite_sel_rr.bin"
-        "assets/airctl/graphite_pressed_prev.bin"
-        "assets/airctl/graphite_pressed_next.bin"
-        "assets/airctl/graphite_pressed_up.bin"
-        "assets/airctl/graphite_pressed_down.bin"
-        "assets/airctl/graphite_pressed_airout.bin"
-        "assets/airctl/graphite_pressed_exit.bin"
+    REQUIRES air_ride_gateway cluster_board_config cluster_protocol cluster_wireless
+             side_display side_pages esp_timer
 )

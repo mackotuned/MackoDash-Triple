@@ -7,11 +7,67 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
-#include "left_dashboard.h"
 #include "side_display.h"
+#include "side_pages.h"
+
+/* Air Ride reports are relayed by the P4 every 100 ms. */
+#define AIR_STATE_TIMEOUT_US 500000LL
 
 static const char *TAG = "triple_left";
 static const uint8_t climate_gateway_mac[6] = CLIMATE_GATEWAY_MAC;
+
+/* The right display owns the Air Ride radio; this display mirrors its
+ * reports and sends commands through the P4, which forwards them. */
+static portMUX_TYPE air_lock = portMUX_INITIALIZER_UNLOCKED;
+static cluster_air_ride_state_t air_state;
+static int64_t air_received_us;
+
+static void air_get_state(side_air_state_t *state)
+{
+    cluster_air_ride_state_t copy;
+    int64_t received_us;
+    taskENTER_CRITICAL(&air_lock);
+    copy = air_state;
+    received_us = air_received_us;
+    taskEXIT_CRITICAL(&air_lock);
+    const bool fresh = received_us != 0 &&
+        esp_timer_get_time() - received_us < AIR_STATE_TIMEOUT_US;
+    *state = (side_air_state_t){
+        .connected = fresh && copy.connected,
+        .pressure_valid = fresh && copy.pressure_valid,
+        .compressor_valid = fresh && copy.compressor_valid,
+        .compressor_on = copy.compressor_on,
+        .psi = {
+            [SIDE_AIR_FRONT_LEFT] = copy.front_left_psi,
+            [SIDE_AIR_FRONT_RIGHT] = copy.front_right_psi,
+            [SIDE_AIR_REAR_LEFT] = copy.rear_left_psi,
+            [SIDE_AIR_REAR_RIGHT] = copy.rear_right_psi,
+            [SIDE_AIR_TANK] = copy.tank_psi,
+        },
+    };
+}
+
+static void air_command(cluster_air_ride_command_code_t code)
+{
+    const cluster_air_ride_command_t command = {.code = code};
+    uint8_t payload[CLUSTER_AIR_RIDE_COMMAND_PAYLOAD_SIZE];
+    if (cluster_air_ride_command_encode(&command, payload, sizeof(payload)) ==
+        CLUSTER_PROTOCOL_OK) {
+        cluster_wireless_send_message(CLUSTER_WIRELESS_ROLE_CENTER,
+                                      CLUSTER_MSG_AIR_RIDE_COMMAND, payload,
+                                      sizeof(payload));
+    }
+}
+
+static const side_air_backend_t air_backend = {
+    .get_state = air_get_state,
+    .command = air_command,
+};
+static const side_pages_config_t pages_config = {
+    .display = CLUSTER_DISPLAY_LEFT,
+    .first_view = CLUSTER_VIEW_DATA,
+    .air = &air_backend,
+};
 
 /* The left display is the climate gateway: it forwards the P4's target
  * positions to the climate node and reports the node's state back. */
@@ -35,7 +91,7 @@ static void handle_message(const cluster_frame_view_t *view)
         cluster_vehicle_fast_t vehicle;
         if (cluster_vehicle_fast_decode(view->payload, view->payload_size,
                                         &vehicle) == CLUSTER_PROTOCOL_OK) {
-            left_dashboard_update(&vehicle);
+            side_pages_update_vehicle(&vehicle);
         }
         break;
     }
@@ -43,7 +99,7 @@ static void handle_message(const cluster_frame_view_t *view)
         cluster_left_settings_t settings;
         if (cluster_left_settings_decode(view->payload, view->payload_size,
                                          &settings) == CLUSTER_PROTOCOL_OK) {
-            left_dashboard_apply_settings(&settings);
+            side_pages_apply_settings(&settings);
         }
         break;
     }
@@ -52,7 +108,18 @@ static void handle_message(const cluster_frame_view_t *view)
         if (cluster_display_mode_decode(view->payload, view->payload_size,
                                         &mode) == CLUSTER_PROTOCOL_OK &&
             mode.target == CLUSTER_DISPLAY_LEFT) {
-            left_dashboard_apply_display_mode(mode.view);
+            side_pages_show_view(mode.view);
+        }
+        break;
+    }
+    case CLUSTER_MSG_AIR_RIDE_STATE: {
+        cluster_air_ride_state_t state;
+        if (cluster_air_ride_state_decode(view->payload, view->payload_size,
+                                          &state) == CLUSTER_PROTOCOL_OK) {
+            taskENTER_CRITICAL(&air_lock);
+            air_state = state;
+            air_received_us = esp_timer_get_time();
+            taskEXIT_CRITICAL(&air_lock);
         }
         break;
     }
@@ -72,11 +139,12 @@ static void handle_message(const cluster_frame_view_t *view)
 void app_main(void)
 {
     ESP_LOGI(TAG, "MackoDash Triple left S3 v0.1.0");
-    ESP_LOGI(TAG, "Role: display-only wireless node");
+    ESP_LOGI(TAG, "Role: side display and climate gateway");
     ESP_LOGI(TAG, "Cluster protocol self-test: %s",
              cluster_protocol_self_test() ? "PASS" : "FAIL");
 
-    ESP_ERROR_CHECK(side_display_start(left_dashboard_create, NULL, true));
+    ESP_ERROR_CHECK(side_display_start(side_pages_create,
+                                       (void *)&pages_config, true));
 
     const cluster_wireless_config_t wireless_config = {
         .role = CLUSTER_WIRELESS_ROLE_LEFT,
@@ -107,7 +175,7 @@ void app_main(void)
             ESP_OK) {
             if (view.type == CLUSTER_MSG_HEARTBEAT) {
                 last_heartbeat_us = esp_timer_get_time();
-                if (!center_online) left_dashboard_set_offline(false);
+                if (!center_online) side_pages_set_center_online(true);
                 center_online = true;
             } else {
                 handle_message(&view);
@@ -117,7 +185,7 @@ void app_main(void)
             esp_timer_get_time() - last_heartbeat_us >=
                 CLUSTER_HEARTBEAT_TIMEOUT_MS * 1000LL) {
             ESP_LOGW(TAG, "Center heartbeat lost");
-            left_dashboard_set_offline(true);
+            side_pages_set_center_online(false);
             center_online = false;
         }
     }

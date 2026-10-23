@@ -72,6 +72,8 @@ static void *changed_context;
 static settings_air_state_cb_t air_state_callback;
 static settings_air_command_cb_t air_command_callback;
 static void *air_callback_context;
+static settings_climate_state_cb_t climate_state_callback;
+static settings_climate_command_cb_t climate_command_callback;
 static esp_netif_t *ap_netif;
 static httpd_handle_t http_server;
 static dns_server_handle_t dns_server;
@@ -106,6 +108,37 @@ static esp_err_t settings_save_locked(void)
     return error;
 }
 
+/* A stored record is the header, the settings struct as it was when saved,
+ * then a CRC over both. Records from the previous schema are a prefix of the
+ * current struct, so they load with the new fields at their defaults. */
+static bool record_load(const uint8_t *blob, size_t size,
+                        cluster_settings_t *settings, uint16_t *version)
+{
+    const size_t header_size = offsetof(settings_record_t, settings);
+    settings_record_t header;
+    if (size < header_size + sizeof(uint32_t)) return false;
+    memcpy(&header, blob, header_size);
+    const size_t settings_size = header.settings_size;
+    const bool current = header.schema_version == CLUSTER_SETTINGS_SCHEMA_VERSION &&
+                         settings_size == sizeof(cluster_settings_t);
+    const bool previous =
+        header.schema_version == CLUSTER_SETTINGS_SCHEMA_PREVIOUS_VERSION &&
+        settings_size < sizeof(cluster_settings_t);
+    if (header.magic != SETTINGS_RECORD_MAGIC || (!current && !previous) ||
+        size != header_size + settings_size + sizeof(uint32_t)) {
+        return false;
+    }
+    uint32_t crc;
+    memcpy(&crc, blob + header_size + settings_size, sizeof(crc));
+    if (crc != esp_rom_crc32_le(0U, blob, header_size + settings_size)) {
+        return false;
+    }
+    cluster_settings_set_defaults(settings);
+    memcpy(settings, blob + header_size, settings_size);
+    *version = header.schema_version;
+    return true;
+}
+
 static esp_err_t settings_load(void)
 {
     esp_err_t error = nvs_flash_init();
@@ -116,30 +149,21 @@ static esp_err_t settings_load(void)
     }
     if (error != ESP_OK && error != ESP_ERR_INVALID_STATE) return error;
 
-    settings_record_t record = {0};
-    size_t size = sizeof(record);
+    static uint8_t blob[sizeof(settings_record_t)];
+    size_t size = sizeof(blob);
     nvs_handle_t handle;
     error = nvs_open(SETTINGS_NAMESPACE, NVS_READONLY, &handle);
     if (error == ESP_OK) {
-        error = nvs_get_blob(handle, SETTINGS_NVS_KEY, &record, &size);
+        error = nvs_get_blob(handle, SETTINGS_NVS_KEY, blob, &size);
         nvs_close(handle);
     }
 
-    const bool record_version_supported =
-        record.schema_version == CLUSTER_SETTINGS_SCHEMA_VERSION ||
-        record.schema_version == CLUSTER_SETTINGS_SCHEMA_PREVIOUS_VERSION;
-    bool valid = error == ESP_OK && size == sizeof(record) &&
-                 record.magic == SETTINGS_RECORD_MAGIC &&
-                 record_version_supported &&
-                 record.settings_size == sizeof(cluster_settings_t) &&
-                 record.crc32 == record_crc(&record);
-    if (valid) {
-        current_settings = record.settings;
-        if (record.schema_version == CLUSTER_SETTINGS_SCHEMA_PREVIOUS_VERSION) {
+    uint16_t version = 0U;
+    if (error == ESP_OK && record_load(blob, size, &current_settings, &version)) {
+        if (version != CLUSTER_SETTINGS_SCHEMA_VERSION) {
             current_settings.schema_version = CLUSTER_SETTINGS_SCHEMA_VERSION;
-            current_settings.appearance.theme = CLUSTER_THEME_CLASSIC;
-            ESP_LOGI(TAG, "Migrated settings schema %u to %u using Classic theme",
-                     CLUSTER_SETTINGS_SCHEMA_PREVIOUS_VERSION,
+            cluster_settings_validate(&current_settings);
+            ESP_LOGI(TAG, "Migrated settings schema %u to %u", version,
                      CLUSTER_SETTINGS_SCHEMA_VERSION);
             return settings_save_locked();
         }
@@ -251,6 +275,15 @@ static cJSON *settings_to_json(const cluster_settings_t *settings)
     JSON_ADD_ARRAY(screen_layout, "leftValueChannels",
                    settings->screen_layout.left_value_channels,
                    CLUSTER_LEFT_VALUE_SLOT_COUNT);
+    JSON_ADD_ARRAY(screen_layout, "rightValueChannels",
+                   settings->screen_layout.right_value_channels,
+                   CLUSTER_LEFT_VALUE_SLOT_COUNT);
+    JSON_ADD_ARRAY(screen_layout, "leftGaugeChannels",
+                   settings->screen_layout.left_gauge_channels,
+                   CLUSTER_GAUGE_SLOT_COUNT);
+    JSON_ADD_ARRAY(screen_layout, "rightGaugeChannels",
+                   settings->screen_layout.right_gauge_channels,
+                   CLUSTER_GAUGE_SLOT_COUNT);
     cJSON_AddBoolToObject(screen_layout, "rightBatteryEnabled",
                           settings->screen_layout.right_battery_enabled);
     cJSON *simulation = cJSON_AddObjectToObject(root, "simulation");
@@ -356,12 +389,34 @@ static bool apply_patch(cluster_settings_t *settings, const char *key,
         settings->air_ride.preset_psi[index] = (uint16_t)number;
         return true;
     }
-    if (indexed_key(key, "screenLayout.leftValueChannels.",
-                    CLUSTER_LEFT_VALUE_SLOT_COUNT, &index) &&
-        json_u32(value, &number) && number < VEHICLE_DATA_COUNT) {
-        settings->screen_layout.left_value_channels[index] =
-            (vehicle_data_channel_t)number;
-        return true;
+    static const struct {
+        const char *prefix;
+        size_t offset;
+        size_t count;
+    } channel_lists[] = {
+        {"screenLayout.leftValueChannels.",
+         offsetof(cluster_screen_layout_settings_t, left_value_channels),
+         CLUSTER_LEFT_VALUE_SLOT_COUNT},
+        {"screenLayout.rightValueChannels.",
+         offsetof(cluster_screen_layout_settings_t, right_value_channels),
+         CLUSTER_LEFT_VALUE_SLOT_COUNT},
+        {"screenLayout.leftGaugeChannels.",
+         offsetof(cluster_screen_layout_settings_t, left_gauge_channels),
+         CLUSTER_GAUGE_SLOT_COUNT},
+        {"screenLayout.rightGaugeChannels.",
+         offsetof(cluster_screen_layout_settings_t, right_gauge_channels),
+         CLUSTER_GAUGE_SLOT_COUNT},
+    };
+    for (size_t list = 0; list < sizeof(channel_lists) / sizeof(channel_lists[0]);
+         ++list) {
+        if (indexed_key(key, channel_lists[list].prefix,
+                        channel_lists[list].count, &index) &&
+            json_u32(value, &number) && number < VEHICLE_DATA_COUNT) {
+            vehicle_data_channel_t *channels = (vehicle_data_channel_t *)(
+                (uint8_t *)&settings->screen_layout + channel_lists[list].offset);
+            channels[index] = (vehicle_data_channel_t)number;
+            return true;
+        }
     }
     SET_BOOL(settings->screen_layout.right_battery_enabled,
              "screenLayout.rightBatteryEnabled");
@@ -592,6 +647,75 @@ static esp_err_t air_state_handler(httpd_req_t *request)
     return error;
 }
 
+static esp_err_t climate_state_handler(httpd_req_t *request)
+{
+    set_common_headers(request);
+    cluster_climate_state_t state = {0};
+    const bool online = climate_state_callback && climate_state_callback(&state);
+    cJSON *json = cJSON_CreateObject();
+    if (!json) return httpd_resp_send_500(request);
+    cJSON_AddBoolToObject(json, "online", online);
+    cJSON_AddNumberToObject(json, "fan", state.target_fan);
+    cJSON_AddNumberToObject(json, "temp", state.target_temp);
+    cJSON_AddNumberToObject(json, "mode", state.target_mode);
+    cJSON_AddBoolToObject(json, "moving", state.moving_mask != 0U);
+    char *body = cJSON_PrintUnformatted(json);
+    cJSON_Delete(json);
+    if (!body) return httpd_resp_send_500(request);
+    httpd_resp_set_type(request, "application/json");
+    const esp_err_t error = httpd_resp_sendstr(request, body);
+    free(body);
+    return error;
+}
+
+static esp_err_t climate_command_handler(httpd_req_t *request)
+{
+    set_common_headers(request);
+    if (!climate_command_callback || request->content_len <= 0 ||
+        request->content_len > 96) {
+        return httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST,
+                                   "Invalid climate command");
+    }
+    char body[97];
+    const int received = httpd_req_recv(request, body, request->content_len);
+    if (received != request->content_len) {
+        return httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST,
+                                   "Incomplete body");
+    }
+    body[received] = '\0';
+    cJSON *json = cJSON_Parse(body);
+    const cJSON *name = json ? cJSON_GetObjectItemCaseSensitive(json, "command") : NULL;
+    const cJSON *value = json ? cJSON_GetObjectItemCaseSensitive(json, "value") : NULL;
+    static const struct {
+        const char *name;
+        settings_climate_dial_t dial;
+    } dials[] = {
+        {"fan", SETTINGS_CLIMATE_FAN},
+        {"temp", SETTINGS_CLIMATE_TEMP},
+        {"mode", SETTINGS_CLIMATE_MODE},
+    };
+    esp_err_t error = ESP_ERR_INVALID_ARG;
+    uint32_t number;
+    if (cJSON_IsString(name) && json_u32(value, &number)) {
+        for (size_t index = 0; index < sizeof(dials) / sizeof(dials[0]); ++index) {
+            if (strcmp(name->valuestring, dials[index].name) == 0) {
+                error = climate_command_callback(dials[index].dial, number);
+                break;
+            }
+        }
+    }
+    cJSON_Delete(json);
+    if (error == ESP_ERR_INVALID_ARG) {
+        return httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST,
+                                   "Unknown or invalid climate command");
+    }
+    if (error != ESP_OK) {
+        httpd_resp_set_status(request, "503 Service Unavailable");
+        return httpd_resp_sendstr(request, "Climate controller is offline");
+    }
+    return httpd_resp_sendstr(request, "ok");
+}
+
 static void wifi_ap_event_handler(void *arg, esp_event_base_t base,
                                   int32_t id, void *event_data)
 {
@@ -661,7 +785,7 @@ static esp_err_t start_http(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.stack_size = 8192;
-    config.max_uri_handlers = 12;  /* 9 used; room for /api/climate endpoints */
+    config.max_uri_handlers = 12;  /* 11 used */
     /* httpd needs max_open_sockets + 3 LWIP sockets, and the DNS server and
      * cluster UDP link hold more. With the default CONFIG_LWIP_MAX_SOCKETS=10,
      * the stock value (7) leaves accept() failing under load. 5 fits; with
@@ -679,6 +803,8 @@ static esp_err_t start_http(void)
         {.uri = "/api/reset", .method = HTTP_POST, .handler = reset_post_handler},
         {.uri = "/api/air/state", .method = HTTP_GET, .handler = air_state_handler},
         {.uri = "/api/air/command", .method = HTTP_POST, .handler = air_command_handler},
+        {.uri = "/api/climate/state", .method = HTTP_GET, .handler = climate_state_handler},
+        {.uri = "/api/climate/command", .method = HTTP_POST, .handler = climate_command_handler},
         {.uri = "/apple-touch-icon.png", .method = HTTP_GET, .handler = icon_get_handler},
         {.uri = "/apple-touch-icon-precomposed.png", .method = HTTP_GET, .handler = icon_get_handler},
         {.uri = "/manifest.json", .method = HTTP_GET, .handler = manifest_get_handler},
@@ -737,4 +863,12 @@ esp_err_t settings_service_start(settings_changed_cb_t callback, void *context,
         return ESP_ERR_NO_MEM;
     }
     return ESP_OK;
+}
+
+void settings_service_set_climate_handlers(
+    settings_climate_state_cb_t state_callback,
+    settings_climate_command_cb_t command_callback)
+{
+    climate_state_callback = state_callback;
+    climate_command_callback = command_callback;
 }

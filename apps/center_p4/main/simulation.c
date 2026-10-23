@@ -42,6 +42,9 @@ void simulation_fill_vehicle(vehicle_fast_state_t *vehicle, uint32_t uptime_ms)
     vehicle->battery_mv = (uint16_t)(13800 + load / 2U);
     vehicle->throttle_tenths_percent = (uint16_t)(100 + load * 9U / 10U);
     vehicle->fuel_level_tenths_percent = (uint16_t)(1000U - load);
+    vehicle->ignition_deg = (int16_t)(12 + (int32_t)load * 24 / 1000);
+    vehicle->ethanol_tenths_percent = 850U;
+    vehicle->knock_count = 0U;
     vehicle->valid_channels = (1UL << VEHICLE_DATA_COUNT) - 1UL;
     vehicle->warning_channels = 0U;
 }

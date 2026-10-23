@@ -11,10 +11,20 @@ The right S3 owns the Air Ride radio bridge (a private component). It may
 transmit a local hold command only while both P4 heartbeat and Air Ride
 telemetry are live. Loss of either link disarms controls and releases the valves.
 
+Both side S3 displays run the same five pages from `components/side_pages`:
+Data, Gauges, Speedometer, Air Ride and Climate. Swiping cycles through them in
+that order, and the knob can put any of them on either display. The Data page
+shows three values and the Gauges page a 2x3 grid; each display has its own
+channel choices, set from the phone settings page. The right S3 drives the Air
+Ride radio directly; the left S3 shows the same readings relayed by the P4 and
+sends its touch commands through the P4, which applies the same checks as phone
+commands.
+
 The left S3 is the climate gateway. The knob sends fan, mode and temperature
 changes to the P4, which keeps the target dial positions and forwards them to
 the left S3; the left S3 drives the climate controller node (private) and
-reports its positions back through the P4 to the knob. The P4 resends the
+reports its positions back through the P4 to the knob. The phone climate page
+uses `GET /api/climate/state` and `POST /api/climate/command` on the P4. The P4 resends the
 targets every second so a restarted node recovers them. Until the knob changes
 something, the P4 adopts the positions the node reports.
 

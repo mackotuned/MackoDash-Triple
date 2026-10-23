@@ -39,8 +39,6 @@ esp_err_t air_link_send_command(cluster_air_ride_command_code_t code);
 /* Average pressure across the bags a knob target covers. */
 uint16_t air_link_target_pressure(const air_link_state_t *state,
                                   uint8_t target);
-cluster_air_ride_command_code_t air_link_target_command(uint8_t target,
-                                                        bool raise);
 
 /* settings_service callbacks for the phone UI. */
 bool air_link_web_state(settings_air_state_t *state, void *context);

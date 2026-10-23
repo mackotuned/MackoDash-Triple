@@ -9,12 +9,14 @@
 extern "C" {
 #endif
 
-#define CLUSTER_SETTINGS_SCHEMA_VERSION 4U
-#define CLUSTER_SETTINGS_SCHEMA_PREVIOUS_VERSION 3U
+#define CLUSTER_SETTINGS_SCHEMA_VERSION 5U
+/* Version 4 records are a prefix of version 5; new fields take defaults. */
+#define CLUSTER_SETTINGS_SCHEMA_PREVIOUS_VERSION 4U
 #define CLUSTER_SHIFT_STAGE_COUNT 3U
 #define CLUSTER_WARNING_THRESHOLD_COUNT 20U
 #define CLUSTER_AIR_RIDE_PRESET_COUNT 6U
 #define CLUSTER_LEFT_VALUE_SLOT_COUNT 3U
+#define CLUSTER_GAUGE_SLOT_COUNT 6U
 
 typedef enum {
     CLUSTER_SCREEN_CENTER = 0,
@@ -84,6 +86,10 @@ typedef enum {
 typedef struct {
     vehicle_data_channel_t left_value_channels[CLUSTER_LEFT_VALUE_SLOT_COUNT];
     bool right_battery_enabled;
+    /* Added in schema 5; must stay at the end of the settings record. */
+    vehicle_data_channel_t right_value_channels[CLUSTER_LEFT_VALUE_SLOT_COUNT];
+    vehicle_data_channel_t left_gauge_channels[CLUSTER_GAUGE_SLOT_COUNT];
+    vehicle_data_channel_t right_gauge_channels[CLUSTER_GAUGE_SLOT_COUNT];
 } cluster_screen_layout_settings_t;
 
 typedef struct {
@@ -146,6 +152,8 @@ typedef struct {
 } cluster_settings_t;
 
 void cluster_settings_set_defaults(cluster_settings_t *settings);
+/* Defaults for the schema 5 display-layout fields only. */
+void cluster_settings_set_layout_defaults(cluster_settings_t *settings);
 bool cluster_settings_validate(cluster_settings_t *settings);
 
 #ifdef __cplusplus

@@ -33,6 +33,8 @@ static portMUX_TYPE climate_lock = portMUX_INITIALIZER_UNLOCKED;
 static cluster_climate_command_t climate_target = {.fan = 0, .mode = 0,
                                                    .temp = 7};
 static bool climate_target_owned;
+static cluster_climate_state_t climate_reported;
+static int64_t climate_reported_us;
 
 static uint32_t uptime_ms(void)
 {
@@ -47,11 +49,10 @@ static bool display_mode_supported(cluster_display_target_t target,
         return view == CLUSTER_VIEW_TACHOMETER ||
                view == CLUSTER_VIEW_AIR_RIDE || view == CLUSTER_VIEW_LOGS;
     case CLUSTER_DISPLAY_LEFT:
-        return view == CLUSTER_VIEW_DATA || view == CLUSTER_VIEW_SPEEDOMETER ||
-               view == CLUSTER_VIEW_CLIMATE;
     case CLUSTER_DISPLAY_RIGHT:
-        return view == CLUSTER_VIEW_SPEEDOMETER ||
-               view == CLUSTER_VIEW_AIR_RIDE || view == CLUSTER_VIEW_CLIMATE;
+        return view == CLUSTER_VIEW_DATA || view == CLUSTER_VIEW_SPEEDOMETER ||
+               view == CLUSTER_VIEW_AIR_RIDE || view == CLUSTER_VIEW_CLIMATE ||
+               view == CLUSTER_VIEW_GAUGES;
     default:
         return false;
     }
@@ -122,31 +123,60 @@ static esp_err_t send_climate_target(void)
                                          sizeof(payload));
 }
 
+/* Sets one dial target and forwards it; shared by the knob and the phone. */
+static esp_err_t set_climate_dial(settings_climate_dial_t dial, uint32_t value)
+{
+    static const uint32_t maximums[] = {
+        [SETTINGS_CLIMATE_FAN] = CLUSTER_CLIMATE_FAN_MAX,
+        [SETTINGS_CLIMATE_TEMP] = CLUSTER_CLIMATE_TEMP_MAX,
+        [SETTINGS_CLIMATE_MODE] = CLUSTER_CLIMATE_MODE_MAX,
+    };
+    if (value > maximums[dial]) return ESP_ERR_INVALID_ARG;
+    taskENTER_CRITICAL(&climate_lock);
+    switch (dial) {
+    case SETTINGS_CLIMATE_FAN: climate_target.fan = (uint8_t)value; break;
+    case SETTINGS_CLIMATE_TEMP: climate_target.temp = (uint8_t)value; break;
+    default: climate_target.mode = (uint8_t)value; break;
+    }
+    climate_target_owned = true;
+    taskEXIT_CRITICAL(&climate_lock);
+    return send_climate_target();
+}
+
 /* Knob climate commands carry the dial position directly. */
 static bool handle_climate_command(const cluster_knob_command_t *command)
 {
     if (command->target != 0U || command->value < 0) return false;
-    const uint32_t value = (uint32_t)command->value;
+    const settings_climate_dial_t dial =
+        command->code == CLUSTER_KNOB_HVAC_FAN_SET ? SETTINGS_CLIMATE_FAN
+        : command->code == CLUSTER_KNOB_HVAC_BLEND_SET ? SETTINGS_CLIMATE_TEMP
+                                                       : SETTINGS_CLIMATE_MODE;
+    const esp_err_t error = set_climate_dial(dial, (uint32_t)command->value);
+    if (error == ESP_ERR_INVALID_ARG) return false;
+    ESP_ERROR_CHECK_WITHOUT_ABORT(error);
+    return true;
+}
+
+/* Node reports arrive about every 500 ms. */
+static bool climate_online(cluster_climate_state_t *state)
+{
     taskENTER_CRITICAL(&climate_lock);
-    bool valid = true;
-    switch (command->code) {
-    case CLUSTER_KNOB_HVAC_FAN_SET:
-        valid = value <= CLUSTER_CLIMATE_FAN_MAX;
-        if (valid) climate_target.fan = (uint8_t)value;
-        break;
-    case CLUSTER_KNOB_HVAC_BLEND_SET:
-        valid = value <= CLUSTER_CLIMATE_TEMP_MAX;
-        if (valid) climate_target.temp = (uint8_t)value;
-        break;
-    default:
-        valid = value <= CLUSTER_CLIMATE_MODE_MAX;
-        if (valid) climate_target.mode = (uint8_t)value;
-        break;
-    }
-    if (valid) climate_target_owned = true;
+    *state = climate_reported;
+    const int64_t reported_us = climate_reported_us;
     taskEXIT_CRITICAL(&climate_lock);
-    if (valid) ESP_ERROR_CHECK_WITHOUT_ABORT(send_climate_target());
-    return valid;
+    return state->connected && reported_us != 0 &&
+           esp_timer_get_time() - reported_us < 2000000LL;
+}
+
+static esp_err_t web_climate_command(settings_climate_dial_t dial,
+                                     uint32_t value)
+{
+    cluster_climate_state_t state;
+    if (!climate_online(&state)) return ESP_ERR_INVALID_STATE;
+    const esp_err_t error = set_climate_dial(dial, value);
+    return error == ESP_ERR_INVALID_ARG ? error
+           : error == ESP_OK            ? ESP_OK
+                                        : ESP_ERR_INVALID_STATE;
 }
 
 static void handle_climate_state(const cluster_frame_view_t *view,
@@ -158,6 +188,8 @@ static void handle_climate_state(const cluster_frame_view_t *view,
         return;
     }
     taskENTER_CRITICAL(&climate_lock);
+    climate_reported = state;
+    climate_reported_us = esp_timer_get_time();
     if (!climate_target_owned && state.connected) {
         climate_target = (cluster_climate_command_t){
             .fan = state.target_fan,
@@ -214,7 +246,7 @@ static void handle_air_adjustment(const cluster_knob_command_t *command)
     if (command->value >= 0 && command->value <= 200 &&
         command->value != current) {
         ESP_ERROR_CHECK_WITHOUT_ABORT(air_link_send_command(
-            air_link_target_command(command->target,
+            cluster_air_target_command(command->target,
                                     command->value > current)));
     } else {
         ESP_ERROR_CHECK_WITHOUT_ABORT(
@@ -323,15 +355,27 @@ static void receive_task(void *argument)
                 continue;
             }
             air_link_store(&state);
-            /* The knob shows live pressures; relay the report unchanged. */
+            /* The knob and the left display show live pressures; relay the
+             * report unchanged. */
             ESP_ERROR_CHECK_WITHOUT_ABORT(cluster_wireless_send(
-                CLUSTER_WIRELESS_ROLE_KNOB, frame, frame_size));
+                CLUSTER_WIRELESS_ROLE_KNOB | CLUSTER_WIRELESS_ROLE_LEFT, frame,
+                frame_size));
+        } else if (view.type == CLUSTER_MSG_AIR_RIDE_COMMAND) {
+            /* Touch controls on the left display; the right display owns the
+             * Air Ride radio. Gated like phone commands. */
+            cluster_air_ride_command_t command;
+            if (cluster_air_ride_command_decode(view.payload, view.payload_size,
+                                                &command) ==
+                CLUSTER_PROTOCOL_OK) {
+                air_link_web_command(command.code, NULL);
+            }
         }
     }
 }
 
 void center_link_start(void)
 {
+    settings_service_set_climate_handlers(climate_online, web_climate_command);
     if (xTaskCreate(receive_task, "cluster_rx", 4096, NULL, 5, NULL) !=
         pdPASS) {
         ESP_LOGE(TAG, "Failed to create cluster receive task");
@@ -355,7 +399,7 @@ static esp_err_t send_display_settings(void)
     cluster_settings_t settings;
     settings_service_get(&settings);
     const int16_t *thresholds = settings.warning_thresholds;
-    const cluster_left_settings_t display_settings = {
+    cluster_left_settings_t display_settings = {
         .revision = settings.revision,
         .theme = settings.appearance.theme,
         .temperature_celsius = settings.units.temperature_celsius,
@@ -374,12 +418,20 @@ static esp_err_t send_display_settings(void)
         .map_critical = thresholds[CLUSTER_THRESHOLD_MAP_CRITICAL],
         .battery_caution = thresholds[CLUSTER_THRESHOLD_BATTERY_CAUTION],
         .battery_critical = thresholds[CLUSTER_THRESHOLD_BATTERY_CRITICAL],
-        .value_channels = {
-            settings.screen_layout.left_value_channels[0],
-            settings.screen_layout.left_value_channels[1],
-            settings.screen_layout.left_value_channels[2],
-        },
     };
+    const cluster_screen_layout_settings_t *layout = &settings.screen_layout;
+    for (size_t slot = 0; slot < CLUSTER_DATA_SLOT_COUNT; ++slot) {
+        display_settings.value_channels[slot] =
+            (uint8_t)layout->left_value_channels[slot];
+        display_settings.right_value_channels[slot] =
+            (uint8_t)layout->right_value_channels[slot];
+    }
+    for (size_t slot = 0; slot < CLUSTER_GAUGE_SLOT_COUNT; ++slot) {
+        display_settings.left_gauge_channels[slot] =
+            (uint8_t)layout->left_gauge_channels[slot];
+        display_settings.right_gauge_channels[slot] =
+            (uint8_t)layout->right_gauge_channels[slot];
+    }
     uint8_t payload[CLUSTER_LEFT_SETTINGS_PAYLOAD_SIZE];
     ESP_ERROR_CHECK(cluster_left_settings_encode(&display_settings, payload,
                                                  sizeof(payload)));

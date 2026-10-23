@@ -24,6 +24,47 @@ static const int16_t threshold_steps[CLUSTER_WARNING_THRESHOLD_COUNT] = {
     1, 1, 10, 10, 10, 10, 10, 10, 1, 1,
 };
 
+static const vehicle_data_channel_t left_value_defaults[CLUSTER_LEFT_VALUE_SLOT_COUNT] = {
+    VEHICLE_DATA_BOOST, VEHICLE_DATA_INTAKE_TEMP, VEHICLE_DATA_BATTERY,
+};
+static const vehicle_data_channel_t right_value_defaults[CLUSTER_LEFT_VALUE_SLOT_COUNT] = {
+    VEHICLE_DATA_BOOST, VEHICLE_DATA_COOLANT_TEMP, VEHICLE_DATA_AFR,
+};
+static const vehicle_data_channel_t left_gauge_defaults[CLUSTER_GAUGE_SLOT_COUNT] = {
+    VEHICLE_DATA_COOLANT_TEMP, VEHICLE_DATA_INTAKE_TEMP, VEHICLE_DATA_AFR,
+    VEHICLE_DATA_OIL_PRESSURE, VEHICLE_DATA_BATTERY, VEHICLE_DATA_ETHANOL,
+};
+static const vehicle_data_channel_t right_gauge_defaults[CLUSTER_GAUGE_SLOT_COUNT] = {
+    VEHICLE_DATA_BOOST, VEHICLE_DATA_THROTTLE, VEHICLE_DATA_IGNITION,
+    VEHICLE_DATA_KNOCK, VEHICLE_DATA_FUEL_PRESSURE, VEHICLE_DATA_FUEL_LEVEL,
+};
+
+/* Replaces out-of-range channel selections with their defaults. */
+static bool validate_channels(vehicle_data_channel_t *channels,
+                              const vehicle_data_channel_t *defaults,
+                              size_t count)
+{
+    bool unchanged = true;
+    for (size_t index = 0; index < count; ++index) {
+        if (channels[index] >= VEHICLE_DATA_COUNT) {
+            channels[index] = defaults[index];
+            unchanged = false;
+        }
+    }
+    return unchanged;
+}
+
+void cluster_settings_set_layout_defaults(cluster_settings_t *settings)
+{
+    cluster_screen_layout_settings_t *layout = &settings->screen_layout;
+    memcpy(layout->right_value_channels, right_value_defaults,
+           sizeof(right_value_defaults));
+    memcpy(layout->left_gauge_channels, left_gauge_defaults,
+           sizeof(left_gauge_defaults));
+    memcpy(layout->right_gauge_channels, right_gauge_defaults,
+           sizeof(right_gauge_defaults));
+}
+
 static uint16_t clamp_u16(uint16_t value, uint16_t minimum, uint16_t maximum)
 {
     if (value < minimum) return minimum;
@@ -72,13 +113,10 @@ void cluster_settings_set_defaults(cluster_settings_t *settings)
     settings->air_ride.preset_psi[4] = 70U;
     settings->air_ride.preset_psi[5] = 110U;
     settings->logging.log_name = CLUSTER_LOG_GENERAL;
-    settings->screen_layout.left_value_channels[CLUSTER_LEFT_SLOT_PRIMARY] =
-        VEHICLE_DATA_BOOST;
-    settings->screen_layout.left_value_channels[CLUSTER_LEFT_SLOT_LOWER_LEFT] =
-        VEHICLE_DATA_INTAKE_TEMP;
-    settings->screen_layout.left_value_channels[CLUSTER_LEFT_SLOT_LOWER_RIGHT] =
-        VEHICLE_DATA_BATTERY;
+    memcpy(settings->screen_layout.left_value_channels, left_value_defaults,
+           sizeof(left_value_defaults));
     settings->screen_layout.right_battery_enabled = true;
+    cluster_settings_set_layout_defaults(settings);
 }
 
 bool cluster_settings_validate(cluster_settings_t *settings)
@@ -181,18 +219,18 @@ bool cluster_settings_validate(cluster_settings_t *settings)
         settings->logging.log_name = CLUSTER_LOG_GENERAL;
         unchanged = false;
     }
-    static const vehicle_data_channel_t left_defaults[CLUSTER_LEFT_VALUE_SLOT_COUNT] = {
-        VEHICLE_DATA_BOOST,
-        VEHICLE_DATA_INTAKE_TEMP,
-        VEHICLE_DATA_BATTERY,
-    };
-    for (size_t index = 0; index < CLUSTER_LEFT_VALUE_SLOT_COUNT; ++index) {
-        if (settings->screen_layout.left_value_channels[index] >=
-            VEHICLE_DATA_COUNT) {
-            settings->screen_layout.left_value_channels[index] =
-                left_defaults[index];
-            unchanged = false;
-        }
-    }
+    cluster_screen_layout_settings_t *layout = &settings->screen_layout;
+    unchanged &= validate_channels(layout->left_value_channels,
+                                   left_value_defaults,
+                                   CLUSTER_LEFT_VALUE_SLOT_COUNT);
+    unchanged &= validate_channels(layout->right_value_channels,
+                                   right_value_defaults,
+                                   CLUSTER_LEFT_VALUE_SLOT_COUNT);
+    unchanged &= validate_channels(layout->left_gauge_channels,
+                                   left_gauge_defaults,
+                                   CLUSTER_GAUGE_SLOT_COUNT);
+    unchanged &= validate_channels(layout->right_gauge_channels,
+                                   right_gauge_defaults,
+                                   CLUSTER_GAUGE_SLOT_COUNT);
     return unchanged;
 }

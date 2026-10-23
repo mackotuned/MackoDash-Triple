@@ -100,29 +100,6 @@ uint16_t air_link_target_pressure(const air_link_state_t *state,
     }
 }
 
-cluster_air_ride_command_code_t air_link_target_command(uint8_t target,
-                                                        bool raise)
-{
-    static const cluster_air_ride_command_code_t
-        commands[CLUSTER_AIR_TARGET_COUNT][2] = {
-        [CLUSTER_AIR_TARGET_ALL] = {CLUSTER_AIR_RIDE_ALL_DOWN,
-                                    CLUSTER_AIR_RIDE_ALL_UP},
-        [CLUSTER_AIR_TARGET_FRONT] = {CLUSTER_AIR_RIDE_FRONT_DOWN,
-                                      CLUSTER_AIR_RIDE_FRONT_UP},
-        [CLUSTER_AIR_TARGET_REAR] = {CLUSTER_AIR_RIDE_REAR_DOWN,
-                                     CLUSTER_AIR_RIDE_REAR_UP},
-        [CLUSTER_AIR_TARGET_FRONT_LEFT] = {CLUSTER_AIR_RIDE_FRONT_LEFT_DOWN,
-                                           CLUSTER_AIR_RIDE_FRONT_LEFT_UP},
-        [CLUSTER_AIR_TARGET_FRONT_RIGHT] = {CLUSTER_AIR_RIDE_FRONT_RIGHT_DOWN,
-                                            CLUSTER_AIR_RIDE_FRONT_RIGHT_UP},
-        [CLUSTER_AIR_TARGET_REAR_LEFT] = {CLUSTER_AIR_RIDE_REAR_LEFT_DOWN,
-                                          CLUSTER_AIR_RIDE_REAR_LEFT_UP},
-        [CLUSTER_AIR_TARGET_REAR_RIGHT] = {CLUSTER_AIR_RIDE_REAR_RIGHT_DOWN,
-                                           CLUSTER_AIR_RIDE_REAR_RIGHT_UP},
-    };
-    return commands[target][raise ? 1 : 0];
-}
-
 bool air_link_web_state(settings_air_state_t *state, void *context)
 {
     (void)context;

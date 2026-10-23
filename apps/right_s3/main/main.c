@@ -7,10 +7,8 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "right_ui.h"
 #include "side_display.h"
-#include "side_speedometer.h"
-#include "vehicle_data.h"
+#include "side_pages.h"
 
 #define AIR_STATE_PERIOD_MS 100U
 /* A remote movement command is released unless the sender repeats it. */
@@ -39,7 +37,7 @@ static uint8_t target_for_air_command(cluster_air_ride_command_code_t command)
     }
 }
 
-static void handle_air_command(const cluster_frame_view_t *view)
+static air_ride_command_t gateway_command(cluster_air_ride_command_code_t code)
 {
     static const air_ride_command_t manual_commands[] = {
         [CLUSTER_AIR_RIDE_FRONT_LEFT_UP] = AIR_RIDE_FRONT_LEFT_UP,
@@ -58,14 +56,56 @@ static void handle_air_command(const cluster_frame_view_t *view)
         [CLUSTER_AIR_RIDE_REAR_UP] = AIR_RIDE_REAR_UP,
         [CLUSTER_AIR_RIDE_REAR_DOWN] = AIR_RIDE_REAR_DOWN,
     };
+    return code >= CLUSTER_AIR_RIDE_FRONT_LEFT_UP &&
+                   code <= CLUSTER_AIR_RIDE_REAR_DOWN
+               ? manual_commands[code] : AIR_RIDE_RELEASE;
+}
 
+/* This display owns the Air Ride radio, so its page talks to it directly. */
+static void air_get_state(side_air_state_t *state)
+{
+    air_ride_state_t gateway;
+    air_ride_gateway_get_state(&gateway);
+    *state = (side_air_state_t){
+        .connected = gateway.connected,
+        .pressure_valid = gateway.pressure_valid,
+        .compressor_valid = gateway.compressor_valid,
+        .compressor_on = gateway.compressor_on,
+        .psi = {
+            [SIDE_AIR_FRONT_LEFT] = gateway.front_left_psi,
+            [SIDE_AIR_FRONT_RIGHT] = gateway.front_right_psi,
+            [SIDE_AIR_REAR_LEFT] = gateway.rear_left_psi,
+            [SIDE_AIR_REAR_RIGHT] = gateway.rear_right_psi,
+            [SIDE_AIR_TANK] = gateway.tank_psi,
+        },
+    };
+}
+
+static void air_command(cluster_air_ride_command_code_t code)
+{
+    ESP_ERROR_CHECK_WITHOUT_ABORT(
+        air_ride_gateway_command(gateway_command(code)));
+}
+
+static const side_air_backend_t air_backend = {
+    .get_state = air_get_state,
+    .command = air_command,
+};
+static const side_pages_config_t pages_config = {
+    .display = CLUSTER_DISPLAY_RIGHT,
+    .first_view = CLUSTER_VIEW_AIR_RIDE,
+    .air = &air_backend,
+};
+
+static void handle_air_command(const cluster_frame_view_t *view)
+{
     cluster_air_ride_command_t command;
     if (cluster_air_ride_command_decode(view->payload, view->payload_size,
                                         &command) != CLUSTER_PROTOCOL_OK) {
         ESP_LOGW(TAG, "Rejected malformed Air Ride command");
         return;
     }
-    if (!right_ui_controls_armed()) {
+    if (!side_pages_air_controls_armed()) {
         ESP_LOGW(TAG, "Rejected Air Ride command while controls are disarmed");
         return;
     }
@@ -77,12 +117,12 @@ static void handle_air_command(const cluster_frame_view_t *view)
             command.code == CLUSTER_AIR_RIDE_COMPRESSOR_ON,
             command.compressor_on_psi, command.compressor_off_psi);
     } else {
-        const air_ride_command_t manual = manual_commands[command.code];
+        const air_ride_command_t manual = gateway_command(command.code);
         error = air_ride_gateway_command(manual);
         remote_command_active = manual != AIR_RIDE_RELEASE;
         remote_command_deadline_us =
             esp_timer_get_time() + REMOTE_COMMAND_TIMEOUT_US;
-        right_ui_remote_adjustment(remote_command_active,
+        side_pages_remote_air_adjustment(remote_command_active,
                                    target_for_air_command(command.code));
     }
     if (error != ESP_OK) {
@@ -105,7 +145,8 @@ static void send_air_state(void)
         .rear_left_psi = gateway.rear_left_psi,
         .rear_right_psi = gateway.rear_right_psi,
     };
-    right_ui_get_adjustment(&state.adjustment_open, &state.adjustment_target);
+    side_pages_get_air_adjustment(&state.adjustment_open,
+                                  &state.adjustment_target);
     uint8_t payload[CLUSTER_AIR_RIDE_STATE_PAYLOAD_SIZE];
     if (cluster_air_ride_state_encode(&state, payload, sizeof(payload)) ==
         CLUSTER_PROTOCOL_OK) {
@@ -122,10 +163,7 @@ static void handle_message(const cluster_frame_view_t *view)
         cluster_vehicle_fast_t vehicle;
         if (cluster_vehicle_fast_decode(view->payload, view->payload_size,
                                         &vehicle) == CLUSTER_PROTOCOL_OK) {
-            side_speedometer_update(
-                vehicle.speed_tenths_kph,
-                vehicle_data_channel_valid(vehicle.valid_channels,
-                                           VEHICLE_DATA_SPEED));
+            side_pages_update_vehicle(&vehicle);
         }
         break;
     }
@@ -137,7 +175,7 @@ static void handle_message(const cluster_frame_view_t *view)
         if (cluster_display_mode_decode(view->payload, view->payload_size,
                                         &mode) == CLUSTER_PROTOCOL_OK &&
             mode.target == CLUSTER_DISPLAY_RIGHT) {
-            right_ui_show_view(mode.view);
+            side_pages_show_view(mode.view);
         }
         break;
     }
@@ -145,7 +183,7 @@ static void handle_message(const cluster_frame_view_t *view)
         cluster_left_settings_t settings;
         if (cluster_left_settings_decode(view->payload, view->payload_size,
                                          &settings) == CLUSTER_PROTOCOL_OK) {
-            right_ui_apply_settings(&settings);
+            side_pages_apply_settings(&settings);
         }
         break;
     }
@@ -161,7 +199,8 @@ void app_main(void)
     ESP_LOGI(TAG, "Cluster protocol self-test: %s",
              cluster_protocol_self_test() ? "PASS" : "FAIL");
 
-    ESP_ERROR_CHECK(side_display_start(right_ui_create, NULL, true));
+    ESP_ERROR_CHECK(side_display_start(side_pages_create,
+                                       (void *)&pages_config, true));
     vTaskDelay(pdMS_TO_TICKS(10));
     ESP_ERROR_CHECK(air_ride_gateway_start(NULL, NULL));
     const cluster_wireless_config_t wireless_config = {
@@ -186,7 +225,7 @@ void app_main(void)
             ESP_OK) {
             if (view.type == CLUSTER_MSG_HEARTBEAT) {
                 last_heartbeat_us = esp_timer_get_time();
-                if (!center_online) right_ui_set_center_online(true);
+                if (!center_online) side_pages_set_center_online(true);
                 center_online = true;
             } else {
                 handle_message(&view);
@@ -206,7 +245,7 @@ void app_main(void)
         if (center_online &&
             now_us - last_heartbeat_us >= CLUSTER_HEARTBEAT_TIMEOUT_MS * 1000LL) {
             ESP_LOGW(TAG, "Center heartbeat lost");
-            right_ui_set_center_online(false);
+            side_pages_set_center_online(false);
             center_online = false;
         }
     }

@@ -19,6 +19,9 @@ typedef enum {
     VEHICLE_DATA_BATTERY,
     VEHICLE_DATA_THROTTLE,
     VEHICLE_DATA_FUEL_LEVEL,
+    VEHICLE_DATA_IGNITION,
+    VEHICLE_DATA_ETHANOL,
+    VEHICLE_DATA_KNOCK,
     VEHICLE_DATA_COUNT,
 } vehicle_data_channel_t;
 
@@ -35,6 +38,9 @@ typedef struct {
     uint16_t battery_mv;
     uint16_t throttle_tenths_percent;
     uint16_t fuel_level_tenths_percent;
+    int16_t ignition_deg;
+    uint16_t ethanol_tenths_percent;
+    uint16_t knock_count;
     uint32_t valid_channels;
     uint32_t warning_channels;
 } vehicle_fast_state_t;

@@ -1,16 +1,10 @@
-#include "right_ui.h"
-
 #include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "air_ride_gateway.h"
-#include "climate_display.h"
 #include "dash_fonts.h"
-#include "esp_check.h"
 #include "settings_schema.h"
-#include "side_display.h"
-#include "side_speedometer.h"
+#include "side_pages_internal.h"
 
 extern const uint8_t air_face_rgb565_start[]
     asm("_binary_air_480_rgb565_bin_start");
@@ -39,9 +33,10 @@ AIRCTL_BIN(graphite_pressed_airout); AIRCTL_BIN(graphite_pressed_exit);
                 .w = (width), .h = (height), .stride = (width) * 2U}, \
      .data_size = (width) * (height) * 2U, .data = symbol##_start}
 
-#define PRESSURE_LABEL_COUNT 5U
 #define CORNER_COUNT 4U
 #define PRESSED_IMAGE_COUNT 6U
+#define COMMAND_REPEAT_MS 150U
+#define AIR_OUT_HOLD_MS 2000U
 #define COLOR_OFFLINE 0xFF4D3DU
 
 /* Indices into the pressed-button highlight images. */
@@ -52,29 +47,6 @@ enum {
     PRESSED_DOWN,
     PRESSED_AIR_OUT,
     PRESSED_EXIT,
-};
-
-typedef enum {
-    PAGE_AIR_RIDE,
-    PAGE_SPEEDOMETER,
-    PAGE_CLIMATE,
-} right_page_t;
-
-static const struct {
-    air_ride_command_t up;
-    air_ride_command_t down;
-} target_commands[CLUSTER_AIR_TARGET_COUNT] = {
-    [CLUSTER_AIR_TARGET_ALL] = {AIR_RIDE_ALL_UP, AIR_RIDE_ALL_DOWN},
-    [CLUSTER_AIR_TARGET_FRONT] = {AIR_RIDE_FRONT_UP, AIR_RIDE_FRONT_DOWN},
-    [CLUSTER_AIR_TARGET_REAR] = {AIR_RIDE_REAR_UP, AIR_RIDE_REAR_DOWN},
-    [CLUSTER_AIR_TARGET_FRONT_LEFT] = {AIR_RIDE_FRONT_LEFT_UP,
-                                       AIR_RIDE_FRONT_LEFT_DOWN},
-    [CLUSTER_AIR_TARGET_FRONT_RIGHT] = {AIR_RIDE_FRONT_RIGHT_UP,
-                                        AIR_RIDE_FRONT_RIGHT_DOWN},
-    [CLUSTER_AIR_TARGET_REAR_LEFT] = {AIR_RIDE_REAR_LEFT_UP,
-                                      AIR_RIDE_REAR_LEFT_DOWN},
-    [CLUSTER_AIR_TARGET_REAR_RIGHT] = {AIR_RIDE_REAR_RIGHT_UP,
-                                       AIR_RIDE_REAR_RIGHT_DOWN},
 };
 
 static lv_image_dsc_t air_face_image = {
@@ -117,11 +89,10 @@ static const uint8_t *const pressed_data[CLUSTER_THEME_COUNT]
      graphite_pressed_airout_start, graphite_pressed_exit_start},
 };
 
+static const side_air_backend_t *backend;
 static lv_obj_t *air_screen;
-static lv_obj_t *speedometer_screen;
-static lv_obj_t *climate_screen;
 static lv_obj_t *air_background;
-static lv_obj_t *pressure_labels[PRESSURE_LABEL_COUNT];
+static lv_obj_t *pressure_labels[SIDE_AIR_PRESSURE_COUNT];
 static lv_obj_t *corner_arcs[CORNER_COUNT];
 static lv_obj_t *p4_status_label;
 static lv_obj_t *air_status_label;
@@ -134,14 +105,10 @@ static lv_obj_t *pressed_image_objects[PRESSED_IMAGE_COUNT];
 static lv_timer_t *command_repeat_timer;
 static lv_timer_t *air_out_hold_timer;
 static size_t shown_target;
-static air_ride_command_t active_command = AIR_RIDE_RELEASE;
+static cluster_air_ride_command_code_t active_command = CLUSTER_AIR_RIDE_RELEASE;
 static bool command_active;
 static bool air_out_holding;
-static bool page_transitioning;
-static right_page_t page = PAGE_AIR_RIDE;
-static uint32_t offline_rgb = 0x84868DU;
 
-static atomic_bool center_online = ATOMIC_VAR_INIT(false);
 static atomic_bool adjustment_open = ATOMIC_VAR_INIT(false);
 static atomic_uint_fast8_t adjustment_target = ATOMIC_VAR_INIT(4U);
 
@@ -153,22 +120,22 @@ static size_t current_target(void)
                                              : CLUSTER_AIR_TARGET_COUNT - 1U;
 }
 
-bool right_ui_controls_armed(void)
+bool side_pages_air_controls_armed(void)
 {
-    air_ride_state_t state;
-    air_ride_gateway_get_state(&state);
-    return atomic_load_explicit(&center_online, memory_order_acquire) &&
-           state.connected;
+    if (!backend || !side_pages_center_online()) return false;
+    side_air_state_t state;
+    backend->get_state(&state);
+    return state.connected;
 }
 
-void right_ui_get_adjustment(bool *open, uint8_t *target)
+void side_pages_get_air_adjustment(bool *open, uint8_t *target)
 {
     *open = atomic_load_explicit(&adjustment_open, memory_order_acquire);
     *target = (uint8_t)atomic_load_explicit(&adjustment_target,
                                             memory_order_acquire);
 }
 
-void right_ui_remote_adjustment(bool active, uint8_t target)
+void side_pages_remote_air_adjustment(bool active, uint8_t target)
 {
     if (active) {
         atomic_store_explicit(&adjustment_target, target, memory_order_release);
@@ -176,31 +143,12 @@ void right_ui_remote_adjustment(bool active, uint8_t target)
     atomic_store_explicit(&adjustment_open, active, memory_order_release);
 }
 
-static lv_obj_t *label_create(lv_obj_t *parent, const char *text,
-                              const lv_font_t *font, uint32_t color)
-{
-    lv_obj_t *label = lv_label_create(parent);
-    lv_label_set_text(label, text);
-    lv_obj_set_style_text_font(label, font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(label, lv_color_hex(color), LV_PART_MAIN);
-    lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-    return label;
-}
-
-static void label_set_text_if_changed(lv_obj_t *label, const char *text)
-{
-    if (strcmp(lv_label_get_text(label), text) != 0) {
-        lv_label_set_text(label, text);
-    }
-}
-
 static void status_label_set(lv_obj_t *label, bool ok, const char *ok_text,
                              const char *bad_text, uint32_t ok_rgb)
 {
-    if (strcmp(lv_label_get_text(label), ok ? ok_text : bad_text) == 0) {
-        return;
-    }
-    lv_label_set_text(label, ok ? ok_text : bad_text);
+    const char *text = ok ? ok_text : bad_text;
+    if (strcmp(lv_label_get_text(label), text) == 0) return;
+    lv_label_set_text(label, text);
     lv_obj_set_style_text_color(label, lv_color_hex(ok ? ok_rgb : COLOR_OFFLINE),
                                 LV_PART_MAIN);
 }
@@ -212,16 +160,15 @@ static void stop_command(void)
     lv_timer_pause(command_repeat_timer);
     if (command_active) {
         command_active = false;
-        ESP_ERROR_CHECK_WITHOUT_ABORT(
-            air_ride_gateway_command(AIR_RIDE_RELEASE));
+        backend->command(CLUSTER_AIR_RIDE_RELEASE);
     }
 }
 
-static void start_command(air_ride_command_t command)
+static void start_command(cluster_air_ride_command_code_t command)
 {
     active_command = command;
     command_active = true;
-    ESP_ERROR_CHECK_WITHOUT_ABORT(air_ride_gateway_command(active_command));
+    backend->command(active_command);
     lv_timer_resume(command_repeat_timer);
     lv_timer_reset(command_repeat_timer);
 }
@@ -229,11 +176,11 @@ static void start_command(air_ride_command_t command)
 static void command_repeat(lv_timer_t *timer)
 {
     (void)timer;
-    if (!command_active || !right_ui_controls_armed()) {
+    if (!command_active || !side_pages_air_controls_armed()) {
         stop_command();
         return;
     }
-    ESP_ERROR_CHECK_WITHOUT_ABORT(air_ride_gateway_command(active_command));
+    backend->command(active_command);
 }
 
 static void select_target(size_t target)
@@ -269,11 +216,9 @@ static void movement_event(lv_event_t *event)
     const bool up = (bool)(uintptr_t)lv_event_get_user_data(event);
     const size_t image = up ? PRESSED_UP : PRESSED_DOWN;
     if (code == LV_EVENT_PRESSED) {
-        if (!right_ui_controls_armed()) return;
+        if (!side_pages_air_controls_armed()) return;
         set_pressed(image, true);
-        const size_t target = current_target();
-        start_command(up ? target_commands[target].up
-                         : target_commands[target].down);
+        start_command(cluster_air_target_command((uint8_t)current_target(), up));
     } else if (released(code)) {
         set_pressed(image, false);
         stop_command();
@@ -299,14 +244,14 @@ static void air_out_hold_complete(lv_timer_t *timer)
 {
     (void)timer;
     lv_timer_pause(air_out_hold_timer);
-    if (!air_out_holding || !right_ui_controls_armed()) return;
-    start_command(target_commands[current_target()].down);
+    if (!air_out_holding || !side_pages_air_controls_armed()) return;
+    start_command(cluster_air_target_command((uint8_t)current_target(), false));
 }
 
 static void air_out_event(lv_event_t *event)
 {
     const lv_event_code_t code = lv_event_get_code(event);
-    if (code == LV_EVENT_PRESSED && right_ui_controls_armed()) {
+    if (code == LV_EVENT_PRESSED && side_pages_air_controls_armed()) {
         air_out_holding = true;
         set_pressed(PRESSED_AIR_OUT, true);
         lv_timer_resume(air_out_hold_timer);
@@ -322,9 +267,7 @@ static void air_out_event(lv_event_t *event)
 static void close_overlay_event(lv_event_t *event)
 {
     if (lv_event_get_code(event) != LV_EVENT_CLICKED) return;
-    stop_command();
-    atomic_store_explicit(&adjustment_open, false, memory_order_release);
-    lv_obj_set_hidden(command_overlay, true);
+    air_page_leave();
 }
 
 static void command_swipe_event(lv_event_t *event)
@@ -377,6 +320,7 @@ static void command_overlay_create(lv_obj_t *screen)
     lv_obj_set_style_border_width(command_overlay, 0, LV_PART_MAIN);
     lv_obj_set_style_pad_all(command_overlay, 0, LV_PART_MAIN);
     lv_obj_set_scrollable(command_overlay, false);
+    /* Swipes on the overlay change the target instead of the page. */
     lv_obj_set_gesture_bubble(command_overlay, false);
     lv_obj_add_event_cb(command_overlay, command_swipe_event,
                         LV_EVENT_GESTURE_LEFT, NULL);
@@ -414,42 +358,39 @@ static void command_overlay_create(lv_obj_t *screen)
                       LV_EVENT_ALL, NULL);
     lv_obj_set_hidden(command_overlay, true);
 
-    command_repeat_timer = lv_timer_create(command_repeat, 150, NULL);
+    command_repeat_timer = lv_timer_create(command_repeat, COMMAND_REPEAT_MS,
+                                           NULL);
     lv_timer_pause(command_repeat_timer);
-    air_out_hold_timer = lv_timer_create(air_out_hold_complete, 2000, NULL);
+    air_out_hold_timer = lv_timer_create(air_out_hold_complete,
+                                         AIR_OUT_HOLD_MS, NULL);
     lv_timer_set_repeat_count(air_out_hold_timer, 1);
     lv_timer_pause(air_out_hold_timer);
 }
 
-/* ---- Air ride page ----------------------------------------------------- */
+/* ---- Page ---------------------------------------------------------------- */
 
 static void air_page_update(lv_timer_t *timer)
 {
     (void)timer;
-    if (page != PAGE_AIR_RIDE) return;
+    if (lv_screen_active() != air_screen) return;
 
-    air_ride_state_t state;
-    air_ride_gateway_get_state(&state);
-    const uint16_t pressures[PRESSURE_LABEL_COUNT] = {
-        state.front_left_psi, state.front_right_psi,
-        state.rear_left_psi, state.rear_right_psi, state.tank_psi,
-    };
+    side_air_state_t state;
+    backend->get_state(&state);
     char text[8];
-    for (size_t index = 0; index < PRESSURE_LABEL_COUNT; ++index) {
+    for (size_t index = 0; index < SIDE_AIR_PRESSURE_COUNT; ++index) {
         if (state.pressure_valid) {
-            snprintf(text, sizeof(text), "%u", (unsigned)pressures[index]);
+            snprintf(text, sizeof(text), "%u", (unsigned)state.psi[index]);
         } else {
             snprintf(text, sizeof(text), "--");
         }
-        label_set_text_if_changed(pressure_labels[index], text);
+        side_pages_label_set_text(pressure_labels[index], text);
     }
     for (size_t index = 0; index < CORNER_COUNT; ++index) {
         lv_arc_set_value(corner_arcs[index],
-                         state.pressure_valid ? pressures[index] : 0U);
+                         state.pressure_valid ? state.psi[index] : 0U);
     }
 
-    const bool online = atomic_load_explicit(&center_online,
-                                             memory_order_acquire);
+    const bool online = side_pages_center_online();
     const bool overlay_open = atomic_load_explicit(&adjustment_open,
                                                    memory_order_acquire);
     /* A remote command can retarget the open overlay; only the selector
@@ -463,7 +404,7 @@ static void air_page_update(lv_timer_t *timer)
                      0x8C969AU);
     status_label_set(air_status_label, state.connected, "AIR LINK",
                      "AIR OFFLINE", 0xE85B32U);
-    label_set_text_if_changed(compressor_label,
+    side_pages_label_set_text(compressor_label,
                               state.compressor_valid
                                   ? (state.compressor_on ? "COMP ON"
                                                          : "COMP OFF")
@@ -472,7 +413,7 @@ static void air_page_update(lv_timer_t *timer)
     if (command_active && (!online || !state.connected)) stop_command();
 }
 
-static void air_page_create(lv_obj_t *screen)
+void air_page_create(lv_obj_t *screen, const side_air_backend_t *air_backend)
 {
     static const uint16_t corner_angles[CORNER_COUNT][2] = {
         {192, 256}, {284, 348}, {104, 168}, {12, 76},
@@ -481,17 +422,18 @@ static void air_page_create(lv_obj_t *screen)
         LV_ARC_MODE_NORMAL, LV_ARC_MODE_REVERSE,
         LV_ARC_MODE_REVERSE, LV_ARC_MODE_NORMAL,
     };
-    static const lv_area_t value_areas[PRESSURE_LABEL_COUNT] = {
+    static const lv_area_t value_areas[SIDE_AIR_PRESSURE_COUNT] = {
         {91, 120, 200, 171}, {279, 120, 388, 171},
         {91, 308, 200, 359}, {279, 308, 388, 359},
         {140, 198, 339, 273},
     };
-    static const lv_area_t hit_areas[PRESSURE_LABEL_COUNT] = {
+    static const lv_area_t hit_areas[SIDE_AIR_PRESSURE_COUNT] = {
         {55, 82, 224, 191}, {255, 82, 424, 191},
         {55, 288, 224, 397}, {255, 288, 424, 397},
         {150, 190, 329, 289},
     };
 
+    backend = air_backend;
     air_screen = screen;
     lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
@@ -522,27 +464,28 @@ static void air_page_create(lv_obj_t *screen)
         lv_obj_set_hidden(arc, true);
     }
 
-    for (size_t index = 0; index < PRESSURE_LABEL_COUNT; ++index) {
+    for (size_t index = 0; index < SIDE_AIR_PRESSURE_COUNT; ++index) {
         const lv_area_t *area = &value_areas[index];
-        pressure_labels[index] = label_create(
-            screen, "--", index == 4 ? &dash_micro_72 : &dash_micro_35,
+        pressure_labels[index] = side_pages_label_create(
+            screen, "--",
+            index == SIDE_AIR_TANK ? &dash_micro_72 : &dash_micro_35,
             0xF4F1EA);
         lv_obj_set_pos(pressure_labels[index], area->x1, area->y1);
         lv_obj_set_size(pressure_labels[index], lv_area_get_width(area),
                         lv_area_get_height(area));
     }
 
-    p4_status_label = label_create(
+    p4_status_label = side_pages_label_create(
         screen, "P4 OFFLINE", &lv_font_montserrat_14, COLOR_OFFLINE);
     lv_obj_align(p4_status_label, LV_ALIGN_TOP_MID, 0, 18);
-    air_status_label = label_create(
+    air_status_label = side_pages_label_create(
         screen, "AIR OFFLINE", &lv_font_montserrat_14, COLOR_OFFLINE);
     lv_obj_align(air_status_label, LV_ALIGN_BOTTOM_MID, 0, -19);
-    compressor_label = label_create(
+    compressor_label = side_pages_label_create(
         screen, "COMP --", &lv_font_montserrat_14, 0x8C969A);
     lv_obj_align(compressor_label, LV_ALIGN_CENTER, 0, 65);
 
-    for (size_t index = 0; index < PRESSURE_LABEL_COUNT; ++index) {
+    for (size_t index = 0; index < SIDE_AIR_PRESSURE_COUNT; ++index) {
         const lv_area_t *area = &hit_areas[index];
         touch_zone_create(screen, area->x1, area->y1, lv_area_get_width(area),
                           lv_area_get_height(area), open_overlay_event,
@@ -563,84 +506,10 @@ static void air_page_create(lv_obj_t *screen)
     lv_timer_create(air_page_update, 100, NULL);
 }
 
-/* ---- Pages ------------------------------------------------------------- */
-
-static lv_obj_t *page_screen(right_page_t target)
+void air_page_set_graphite(bool graphite)
 {
-    switch (target) {
-    case PAGE_SPEEDOMETER: return speedometer_screen;
-    case PAGE_CLIMATE: return climate_screen;
-    default: return air_screen;
-    }
-}
-
-static void page_loaded_event(lv_event_t *event)
-{
-    (void)event;
-    page_transitioning = false;
-}
-
-static void page_swipe_event(lv_event_t *event)
-{
-    const lv_event_code_t code = lv_event_get_code(event);
-    if (page_transitioning ||
-        (code != LV_EVENT_GESTURE_LEFT && code != LV_EVENT_GESTURE_RIGHT)) {
-        return;
-    }
-    page = page == PAGE_SPEEDOMETER ? PAGE_AIR_RIDE : PAGE_SPEEDOMETER;
-    page_transitioning = true;
-    lv_screen_load_anim(page_screen(page),
-                        code == LV_EVENT_GESTURE_LEFT
-                            ? LV_SCREEN_LOAD_ANIM_MOVE_LEFT
-                            : LV_SCREEN_LOAD_ANIM_MOVE_RIGHT,
-                        250U, 0U, false);
-}
-
-static void add_swipe_events(lv_obj_t *screen)
-{
-    lv_obj_add_event_cb(screen, page_swipe_event, LV_EVENT_GESTURE_LEFT, NULL);
-    lv_obj_add_event_cb(screen, page_swipe_event, LV_EVENT_GESTURE_RIGHT, NULL);
-    lv_obj_add_event_cb(screen, page_loaded_event, LV_EVENT_SCREEN_LOADED,
-                        NULL);
-}
-
-static void update_offline_locked(void)
-{
-    const bool offline = !atomic_load_explicit(&center_online,
-                                               memory_order_acquire);
-    climate_display_set_offline(offline);
-    side_speedometer_set_offline(offline, offline_rgb);
-}
-
-void right_ui_create(lv_obj_t *screen, void *context)
-{
-    (void)context;
-    air_page_create(screen);
-    speedometer_screen = lv_obj_create(NULL);
-    side_speedometer_create(speedometer_screen);
-    climate_screen = climate_display_create();
-    add_swipe_events(air_screen);
-    add_swipe_events(speedometer_screen);
-    update_offline_locked();
-}
-
-void right_ui_set_center_online(bool online)
-{
-    atomic_store_explicit(&center_online, online, memory_order_release);
-    if (side_display_lock(100) != ESP_OK) return;
-    update_offline_locked();
-    side_display_unlock();
-}
-
-void right_ui_apply_settings(const cluster_left_settings_t *settings)
-{
-    ESP_ERROR_CHECK_WITHOUT_ABORT(
-        side_display_set_brightness(settings->right_brightness));
-    if (side_display_lock(100) != ESP_OK) return;
-    const bool graphite = settings->theme == CLUSTER_THEME_GRAPHITE;
     const size_t theme = graphite ? CLUSTER_THEME_GRAPHITE
                                   : CLUSTER_THEME_CLASSIC;
-    offline_rgb = settings->offline_rgb;
     air_face_image.data = graphite ? graphite_air_face_rgb565_start
                                    : air_face_rgb565_start;
     control_background_image.data = graphite ? graphite_control_480_bg_start
@@ -658,26 +527,11 @@ void right_ui_apply_settings(const cluster_left_settings_t *settings)
         lv_obj_set_hidden(corner_arcs[index], !graphite);
     }
     select_target(current_target());
-    side_speedometer_set_graphite(graphite);
-    side_speedometer_set_accent(settings->tach_rgb);
-    climate_display_set_graphite(graphite);
-    update_offline_locked();
-    side_display_unlock();
 }
 
-void right_ui_show_view(cluster_display_view_t view)
+void air_page_leave(void)
 {
-    right_page_t next;
-    switch (view) {
-    case CLUSTER_VIEW_AIR_RIDE: next = PAGE_AIR_RIDE; break;
-    case CLUSTER_VIEW_SPEEDOMETER: next = PAGE_SPEEDOMETER; break;
-    case CLUSTER_VIEW_CLIMATE: next = PAGE_CLIMATE; break;
-    default: return;
-    }
-    atomic_store_explicit(&adjustment_open, false, memory_order_release);
-    if (side_display_lock(100) != ESP_OK) return;
     stop_command();
-    page = next;
-    lv_screen_load(page_screen(page));
-    side_display_unlock();
+    atomic_store_explicit(&adjustment_open, false, memory_order_release);
+    lv_obj_set_hidden(command_overlay, true);
 }

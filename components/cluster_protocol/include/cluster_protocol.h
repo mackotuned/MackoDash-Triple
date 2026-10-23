@@ -17,10 +17,12 @@ extern "C" {
 #define CLUSTER_AIR_RIDE_PAYLOAD_VERSION 1U
 #define CLUSTER_AIR_RIDE_STATE_PAYLOAD_SIZE 14U
 #define CLUSTER_AIR_RIDE_COMMAND_PAYLOAD_SIZE 6U
-#define CLUSTER_VEHICLE_FAST_PAYLOAD_VERSION 2U
-#define CLUSTER_VEHICLE_FAST_PAYLOAD_SIZE 36U
-#define CLUSTER_LEFT_SETTINGS_PAYLOAD_VERSION 3U
-#define CLUSTER_LEFT_SETTINGS_PAYLOAD_SIZE 42U
+#define CLUSTER_VEHICLE_FAST_PAYLOAD_VERSION 3U
+#define CLUSTER_VEHICLE_FAST_PAYLOAD_SIZE 42U
+#define CLUSTER_LEFT_SETTINGS_PAYLOAD_VERSION 4U
+#define CLUSTER_LEFT_SETTINGS_PAYLOAD_SIZE 57U
+#define CLUSTER_DATA_SLOT_COUNT 3U
+#define CLUSTER_GAUGE_SLOT_COUNT 6U
 #define CLUSTER_KNOB_COMMAND_PAYLOAD_VERSION 1U
 #define CLUSTER_KNOB_COMMAND_PAYLOAD_SIZE 8U
 #define CLUSTER_DISPLAY_MODE_PAYLOAD_VERSION 1U
@@ -79,6 +81,7 @@ typedef enum {
     CLUSTER_VIEW_AIR_RIDE = 3,
     CLUSTER_VIEW_LOGS = 4,
     CLUSTER_VIEW_CLIMATE = 5,
+    CLUSTER_VIEW_GAUGES = 6,
     CLUSTER_VIEW_COUNT,
 } cluster_display_view_t;
 
@@ -175,6 +178,9 @@ typedef struct {
     uint16_t battery_mv;
     uint16_t throttle_tenths_percent;
     uint16_t fuel_level_tenths_percent;
+    int16_t ignition_deg;
+    uint16_t ethanol_tenths_percent;
+    uint16_t knock_count;
     uint32_t valid_channels;
     uint32_t warning_channels;
 } cluster_vehicle_fast_t;
@@ -198,7 +204,11 @@ typedef struct {
     int16_t map_critical;
     int16_t battery_caution;
     int16_t battery_critical;
-    uint8_t value_channels[3];
+    /* Data page slots and gauge grid per side display. */
+    uint8_t value_channels[CLUSTER_DATA_SLOT_COUNT];
+    uint8_t right_value_channels[CLUSTER_DATA_SLOT_COUNT];
+    uint8_t left_gauge_channels[CLUSTER_GAUGE_SLOT_COUNT];
+    uint8_t right_gauge_channels[CLUSTER_GAUGE_SLOT_COUNT];
 } cluster_left_settings_t;
 
 /* Target dial positions, P4 to the climate gateway display. */
@@ -240,6 +250,10 @@ typedef struct {
 } cluster_frame_view_t;
 
 uint16_t cluster_crc16_ccitt(const uint8_t *data, size_t size);
+
+/* Raise or lower command for an air ride target (cluster_air_target_t). */
+cluster_air_ride_command_code_t cluster_air_target_command(uint8_t target,
+                                                           bool raise);
 
 /* Round-trips a frame through encode and decode; logged at boot. */
 bool cluster_protocol_self_test(void);

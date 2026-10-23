@@ -66,8 +66,9 @@ ASSET(screen_target_0_left); ASSET(screen_target_1_center);
 ASSET(screen_target_2_right); ASSET(screen_target_3_back);
 ASSET(screen_source_0_tach); ASSET(screen_source_0_speedo);
 ASSET(screen_source_1_data); ASSET(screen_source_1_air);
-ASSET(screen_source_2_climate); ASSET(screen_source_2_logs);
-ASSET(screen_source_3_back);
+ASSET(screen_source_2_gauges); ASSET(screen_source_2_logs);
+ASSET(screen_source_3_air); ASSET(screen_source_3_back);
+ASSET(screen_source_4_climate); ASSET(screen_source_5_back);
 ASSET(rec_idle); ASSET(rec_active);
 ASSET(air_0_all); ASSET(air_1_front); ASSET(air_2_rear); ASSET(air_3_fl);
 ASSET(air_4_fr); ASSET(air_5_rl); ASSET(air_6_rr); ASSET(air_7_back);
@@ -143,30 +144,25 @@ static const themed_asset_t SCREEN_TARGET_ASSETS[4] = {
     THEMED(screen_target_0_left), THEMED(screen_target_1_center),
     THEMED(screen_target_2_right), THEMED(screen_target_3_back),
 };
-static const themed_asset_t SCREEN_SOURCE_ASSETS[CLUSTER_DISPLAY_COUNT][4] = {
-    [CLUSTER_DISPLAY_LEFT] = {
-        THEMED(screen_source_0_speedo), THEMED(screen_source_1_data),
-        THEMED(screen_source_2_climate), THEMED(screen_source_3_back),
-    },
+/* "Show on screen" menus: the views each display offers, then BACK. */
+#define SCREEN_SOURCE_MAX_VIEWS 5
+typedef struct {
+    int view_count;
+    cluster_display_view_t views[SCREEN_SOURCE_MAX_VIEWS];
+    themed_asset_t assets[SCREEN_SOURCE_MAX_VIEWS + 1];
+} screen_source_menu_t;
+
+#define SIDE_SOURCE_MENU {                                                       .view_count = 5,                                                             .views = {CLUSTER_VIEW_SPEEDOMETER, CLUSTER_VIEW_DATA,                                 CLUSTER_VIEW_GAUGES, CLUSTER_VIEW_AIR_RIDE,                                  CLUSTER_VIEW_CLIMATE},                                             .assets = {THEMED(screen_source_0_speedo), THEMED(screen_source_1_data),                THEMED(screen_source_2_gauges), THEMED(screen_source_3_air),                 THEMED(screen_source_4_climate), THEMED(screen_source_5_back)}, }
+static const screen_source_menu_t SCREEN_SOURCE_MENUS[CLUSTER_DISPLAY_COUNT] = {
+    [CLUSTER_DISPLAY_LEFT] = SIDE_SOURCE_MENU,
     [CLUSTER_DISPLAY_CENTER] = {
-        THEMED(screen_source_0_tach), THEMED(screen_source_1_air),
-        THEMED(screen_source_2_logs), THEMED(screen_source_3_back),
+        .view_count = 3,
+        .views = {CLUSTER_VIEW_TACHOMETER, CLUSTER_VIEW_AIR_RIDE,
+                  CLUSTER_VIEW_LOGS},
+        .assets = {THEMED(screen_source_0_tach), THEMED(screen_source_1_air),
+                   THEMED(screen_source_2_logs), THEMED(screen_source_3_back)},
     },
-    [CLUSTER_DISPLAY_RIGHT] = {
-        THEMED(screen_source_0_speedo), THEMED(screen_source_1_air),
-        THEMED(screen_source_2_climate), THEMED(screen_source_3_back),
-    },
-};
-static const cluster_display_view_t SCREEN_SOURCE_VIEWS[CLUSTER_DISPLAY_COUNT][3] = {
-    [CLUSTER_DISPLAY_LEFT] = {
-        CLUSTER_VIEW_SPEEDOMETER, CLUSTER_VIEW_DATA, CLUSTER_VIEW_CLIMATE,
-    },
-    [CLUSTER_DISPLAY_CENTER] = {
-        CLUSTER_VIEW_TACHOMETER, CLUSTER_VIEW_AIR_RIDE, CLUSTER_VIEW_LOGS,
-    },
-    [CLUSTER_DISPLAY_RIGHT] = {
-        CLUSTER_VIEW_SPEEDOMETER, CLUSTER_VIEW_AIR_RIDE, CLUSTER_VIEW_CLIMATE,
-    },
+    [CLUSTER_DISPLAY_RIGHT] = SIDE_SOURCE_MENU,
 };
 static const themed_asset_t RECORD_ASSETS[2] = {
     THEMED(rec_idle), THEMED(rec_active),
@@ -368,12 +364,13 @@ static void send_live(cluster_knob_command_code_t code, uint8_t target,
     send_command(code, target, value, CLUSTER_KNOB_COMMAND_LIVE);
 }
 
-static int page_count(page_t page)
+static int page_count(const knob_state_t *current)
 {
-    switch (page) {
+    switch (current->page) {
     case PAGE_MAIN: return 6;
     case PAGE_SCREEN_TARGET: return 4;
-    case PAGE_SCREEN_SOURCE: return 4;
+    case PAGE_SCREEN_SOURCE:
+        return SCREEN_SOURCE_MENUS[current->screen_target].view_count + 1;
     case PAGE_AIR: return 8;
     case PAGE_CLIMATE: return 4;
     case PAGE_MODE: return 6;
@@ -490,7 +487,7 @@ static void rotate_ui(int direction)
     xSemaphoreTake(state_mutex, portMAX_DELAY);
     state.last_activity_us = esp_timer_get_time();
     if (!is_adjust_page(state.page)) {
-        const int count = page_count(state.page);
+        const int count = page_count(&state);
         state.selection = (state.selection + direction + count) % count;
     } else {
         int step = 1;
@@ -565,16 +562,20 @@ static void press_ui(void)
             state.selection = 0;
         }
         break;
-    case PAGE_SCREEN_SOURCE:
-        if (state.selection == 3) state.page = PAGE_SCREEN_TARGET;
-        else {
+    case PAGE_SCREEN_SOURCE: {
+        const screen_source_menu_t *menu =
+            &SCREEN_SOURCE_MENUS[state.screen_target];
+        if (state.selection >= menu->view_count) {
+            state.page = PAGE_SCREEN_TARGET;
+        } else {
             code = CLUSTER_KNOB_SCREEN_SET;
             target = (uint8_t)state.screen_target;
-            value = SCREEN_SOURCE_VIEWS[state.screen_target][state.selection];
+            value = menu->views[state.selection];
             send = true;
             go_main_locked();
         }
         break;
+    }
     case PAGE_RECORD:
         code = CLUSTER_KNOB_RECORD_SET;
         value = state.recording ? 0 : 1;
@@ -668,7 +669,8 @@ static const uint8_t *background_for(const knob_state_t *current)
     switch (current->page) {
     case PAGE_SCREEN_TARGET: return SCREEN_TARGET_ASSETS[selection][theme];
     case PAGE_SCREEN_SOURCE:
-        return SCREEN_SOURCE_ASSETS[current->screen_target][selection][theme];
+        return SCREEN_SOURCE_MENUS[current->screen_target].assets[selection]
+            [theme];
     case PAGE_RECORD: return RECORD_ASSETS[current->recording ? 1 : 0][theme];
     case PAGE_AIR: return AIR_ASSETS[selection][theme];
     case PAGE_AIR_ADJUST: return AIR_ADJUST_ASSETS[current->adjust_target][theme];

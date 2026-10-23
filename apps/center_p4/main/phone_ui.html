@@ -1171,15 +1171,15 @@ function airLoop() {
 }
 
 // ======================================================================
-// Climate — UI is complete; firmware endpoints are pending.
+// Climate — the P4 forwards changes to the climate controller node.
 // ======================================================================
 /* ---- Climate API adapter: the only code that knows the wire format. ----
-   Firmware integration (proposed in the handoff):
-     GET  /api/climate/state   -> {"online":true,"fan":0-4,"blend":0-100,"mode":0-4}
-     POST /api/climate/command    {"command":"fan"|"blend"|"mode","value":n}
-   Mode index: 0 FACE, 1 BI-LEVEL, 2 FEET, 3 FEET/DEF, 4 DEFROST (Knob contract).
-   Until the endpoints exist the server answers with its captive-portal
-   redirect; redirect:'manual' keeps that from downloading the whole page. */
+     GET  /api/climate/state   -> {"online":true,"fan":0-10,"temp":0-14,"mode":0-4,"moving":false}
+     POST /api/climate/command    {"command":"fan"|"temp"|"mode","value":n}
+   Positions match the Civic control board detents: fan 0 off and 1-10,
+   temp 0 full cold to 14 full hot, mode 0 FACE, 1 BI-LEVEL, 2 FEET,
+   3 FEET/DEF, 4 DEFROST. 503 means the climate node is offline. */
+var FAN_MAX = 10, TEMP_MAX = 14;
 var climateApi = {
   getState: function () {
     return request('GET', '/api/climate/state', null, 1500, { manualRedirect: true }).then(function (r) {
@@ -1188,7 +1188,8 @@ var climateApi = {
       if (!r.ok || !r.json) return { status: r.status === 0 ? 'unreachable' : 'offline' };
       var j = r.json;
       return { status: j.online === false ? 'offline' : 'live',
-               fan: clamp(Number(j.fan) || 0, 0, 4), blend: clamp(Number(j.blend) || 0, 0, 100), mode: clamp(Number(j.mode) || 0, 0, 4) };
+               fan: clamp(Number(j.fan) || 0, 0, FAN_MAX), temp: clamp(Number(j.temp) || 0, 0, TEMP_MAX),
+               mode: clamp(Number(j.mode) || 0, 0, 4) };
     });
   },
   send: function (command, value) {
@@ -1202,10 +1203,11 @@ var climateApi = {
   }
 };
 var MODES = ['FACE', 'BI-LEVEL', 'FEET', 'FEET/DEF', 'DEFROST'];
-var C = { status: 'checking', fan: 0, blend: 50, mode: 1, timer: null, sendTimer: null, els: {} };
+var C = { status: 'checking', fan: 0, temp: 7, mode: 1, timer: null, sendTimer: null, els: {} };
 
+/* Fan and temperature repeat while held, so only the last value is sent. */
 function climateSend(command, value) {
-  if (command === 'blend') {
+  if (command === 'temp' || command === 'fan') {
     clearTimeout(C.sendTimer);
     C.sendTimer = setTimeout(function () { climateSendNow(command, value); }, 220);
   } else climateSendNow(command, value);
@@ -1223,23 +1225,36 @@ function climatePoll() {
   clearTimeout(C.timer);
   if (S.page !== 'climate') return;
   climateApi.getState().then(function (st) {
-    if (st.status === 'live') { C.fan = st.fan; C.blend = st.blend; C.mode = st.mode; }
+    if (st.status === 'live') { C.fan = st.fan; C.temp = st.temp; C.mode = st.mode; }
     if (st.status !== 'unreachable') C.status = st.status;
     renderClimate();
     if (S.page === 'climate') C.timer = setTimeout(climatePoll, C.status === 'preview' ? 15000 : 1000);
   });
 }
-function setBlend(v) { C.blend = clamp(Math.round(v), 0, 100); renderClimate(); climateSend('blend', C.blend); }
+function setTemp(v) {
+  var next = clamp(Math.round(v), 0, TEMP_MAX);
+  if (next === C.temp) return;
+  C.temp = next; renderClimate(); climateSend('temp', C.temp);
+}
+function setFan(v) {
+  var next = clamp(Math.round(v), 0, FAN_MAX);
+  if (next === C.fan) return;
+  C.fan = next; renderClimate(); climateSend('fan', C.fan);
+}
 function buildClimate(p) {
   var E = C.els;
   // fan bank
   E.fanIco = h('div', { class: 'fanico', html: I.fan });
-  E.fans = ['OFF', '1', '2', '3', '4'].map(function (t, i) {
-    var b = h('button', null, [h('b', { text: t }), i ? h('small', { text: 'SPEED' }) : null]);
-    b.addEventListener('click', function () { C.fan = i; renderClimate(); climateSend('fan', i); });
-    return b;
-  });
-  var fan = h('div', { class: 'panel c-fan' }, [h('div', { class: 'ptitle', text: 'Fan' }), E.fanIco, h('div', { class: 'bank' }, E.fans)]);
+  // fan: slower / current speed (tap for off) / faster, across 10 speeds
+  var slower = h('button', null, [h('b', { text: '−' }), h('small', { text: 'SLOWER' })]);
+  var faster = h('button', null, [h('b', { text: '+' }), h('small', { text: 'FASTER' })]);
+  E.fanNum = h('b'); E.fanWord = h('small');
+  E.fanVal = h('button', null, [E.fanNum, E.fanWord]);
+  repeatPress(slower, function () { setFan(C.fan - 1); });
+  repeatPress(faster, function () { setFan(C.fan + 1); });
+  E.fanVal.addEventListener('click', function () { setFan(0); });
+  var fan = h('div', { class: 'panel c-fan' }, [h('div', { class: 'ptitle', text: 'Fan' }), E.fanIco,
+    h('div', { class: 'bank' }, [slower, E.fanVal, faster])]);
   // temperature dial (270 degree sweep, drag or tap)
   var dial = s('svg', { class: 'dial', viewBox: '0 0 240 230', preserveAspectRatio: 'xMidYMid meet' });
   dial.innerHTML = '<defs><linearGradient id="tg" x1="0" x2="1"><stop offset="0" class="s-cold"/><stop offset=".5" class="s-mid"/><stop offset="1" class="s-hot"/></linearGradient></defs>';
@@ -1260,7 +1275,7 @@ function buildClimate(p) {
     var y = (pt.clientY - r.top - (r.height - 230 * sc) / 2) / sc - 118;
     var ang = Math.atan2(x, -y) * 180 / Math.PI;
     if (ang > 135 || ang < -135) ang = ang > 0 ? 135 : -135;
-    setBlend((ang + 135) / 270 * 100);
+    setTemp((ang + 135) / 270 * TEMP_MAX);
   }
   var dragging = false;
   function down(e) { dragging = true; if (e.cancelable) e.preventDefault(); fromPointer(e); }
@@ -1275,8 +1290,8 @@ function buildClimate(p) {
     window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
   }
   var cold = h('button', { class: 'cold', text: '− COLD' }), hot = h('button', { class: 'hot', text: 'HOT +' });
-  repeatPress(cold, function () { setBlend(C.blend - 5); });
-  repeatPress(hot, function () { setBlend(C.blend + 5); });
+  repeatPress(cold, function () { setTemp(C.temp - 1); });
+  repeatPress(hot, function () { setTemp(C.temp + 1); });
   E.stat = h('span', { class: 'cstat chk', text: 'CHECKING' });
   E.note = h('div', { class: 'cnote' });
   var temp = h('div', { class: 'panel c-temp' }, [h('div', { class: 'ptitle', text: 'Temperature' }), E.stat,
@@ -1297,15 +1312,18 @@ function renderClimate() {
   var st = { checking: ['CHECKING', 'chk', ''], preview: ['PREVIEW', '', 'PREVIEW · NOT APPLIED TO THE CAR'],
              offline: ['HVAC OFFLINE', 'off', 'NOT APPLIED · HVAC OFFLINE'], live: ['LIVE', 'live', ''] }[C.status] || ['CHECKING', 'chk', ''];
   E.stat.textContent = st[0]; E.stat.className = 'cstat ' + st[1]; E.note.textContent = st[2];
-  E.fans.forEach(function (b, i) { b.className = i === C.fan ? 'on' : ''; });
+  E.fanNum.textContent = C.fan ? String(C.fan) : 'OFF';
+  E.fanWord.textContent = C.fan ? 'SPEED' : 'FAN';
+  E.fanVal.className = C.fan ? 'on' : '';
   var svg = E.fanIco.firstChild;
-  svg.style.animationDuration = [1, 2.2, 1.3, 0.75, 0.42][C.fan] + 's';
+  svg.style.animationDuration = (2.4 - C.fan * 0.2).toFixed(2) + 's';
   svg.style.animationPlayState = C.fan ? 'running' : 'paused';
-  var kp = polar(120, 118, 92, -135 + C.blend * 2.7);
+  var kp = polar(120, 118, 92, -135 + C.temp * 270 / TEMP_MAX);
   E.knob.setAttribute('cx', kp[0].toFixed(1)); E.knob.setAttribute('cy', kp[1].toFixed(1));
-  E.big.textContent = C.blend + '%';
-  E.big.setAttribute('class', 'big' + (C.blend < 35 ? ' cold' : C.blend > 65 ? ' hot' : ''));
-  E.word.textContent = C.blend < 35 ? 'COLD' : C.blend > 65 ? 'HOT' : 'MIXED';
+  var cold = C.temp < 5, hot = C.temp > 9;
+  E.big.textContent = String(C.temp);
+  E.big.setAttribute('class', 'big' + (cold ? ' cold' : hot ? ' hot' : ''));
+  E.word.textContent = cold ? 'COLD' : hot ? 'HOT' : 'MIXED';
   E.modes.forEach(function (b, i) { b.className = i === C.mode ? 'on' : ''; });
 }
 
@@ -1325,18 +1343,29 @@ function buildAirSetup(p) {
   ]));
 }
 function buildSystem(p) {
-  var channels = ['RPM', 'Speed', 'Boost', 'Coolant', 'Intake', 'AFR', 'Oil pressure', 'Fuel pressure', 'Battery', 'Throttle', 'Fuel level'];
+  /* Order matches vehicle_data_channel_t in the firmware. */
+  var channels = ['RPM', 'Speed', 'Boost', 'Coolant', 'Intake', 'AFR', 'Oil pressure', 'Fuel pressure', 'Battery', 'Throttle', 'Fuel level',
+                  'Ignition timing', 'Ethanol', 'Knock count'];
+  function dataSlots(side) {
+    return ['Main value', 'Lower left', 'Lower right'].map(function (label, i) {
+      return select('screenLayout.' + side + 'ValueChannels.' + i, label, channels);
+    });
+  }
+  function gaugeSlots(side) {
+    return ['Top left', 'Top right', 'Middle left', 'Middle right', 'Bottom left', 'Bottom right'].map(function (label, i) {
+      return select('screenLayout.' + side + 'GaugeChannels.' + i, label, channels);
+    });
+  }
   p.appendChild(h('div', { class: 'grid c2' }, [
     card('Vehicle source', [segmented('canProtocol', 'CAN protocol', ['Automatic', 'Hondata'], null, true)]),
     card('Logging', [toggle('logging.autoRecord', 'Auto record', 'Start a microSD log automatically'),
       segmented('logging.logName', 'Log profile', ['General', 'Dyno', 'Tune', 'Race', 'Test'], null, true)])
   ]));
-  p.appendChild(section('Display roles', h('div', { class: 'grid c2' }, [
-    card('Left · CAN data', [
-      select('screenLayout.leftValueChannels.0', 'Main value', channels),
-      select('screenLayout.leftValueChannels.1', 'Lower left', channels),
-      select('screenLayout.leftValueChannels.2', 'Lower right', channels)]),
-    card('Right · Air Ride', [toggle('screenLayout.rightBatteryEnabled', 'Show CAN battery')])
+  p.appendChild(section('Side display pages', h('div', { class: 'grid c2' }, [
+    card('Left · Data page', dataSlots('left'), 'Large value and the two below it'),
+    card('Right · Data page', dataSlots('right'), 'Large value and the two below it'),
+    card('Left · Gauges page', gaugeSlots('left'), 'Six-value grid'),
+    card('Right · Gauges page', gaugeSlots('right'), 'Six-value grid')
   ])));
   var info = {};
   ['Settings revision', 'Schema version', 'Requests OK', 'Requests failed'].forEach(function (k) { info[k] = h('b', { text: '--' }); });

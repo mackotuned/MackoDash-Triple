@@ -269,6 +269,9 @@ cluster_protocol_result_t cluster_vehicle_fast_encode(
     write_u32_le(&payload[26], vehicle->valid_channels);
     write_u32_le(&payload[30], vehicle->warning_channels);
     write_u16_le(&payload[34], vehicle->fuel_level_tenths_percent);
+    write_u16_le(&payload[36], (uint16_t)vehicle->ignition_deg);
+    write_u16_le(&payload[38], vehicle->ethanol_tenths_percent);
+    write_u16_le(&payload[40], vehicle->knock_count);
     return CLUSTER_PROTOCOL_OK;
 }
 
@@ -301,6 +304,9 @@ cluster_protocol_result_t cluster_vehicle_fast_decode(
     vehicle->valid_channels = read_u32_le(&payload[26]);
     vehicle->warning_channels = read_u32_le(&payload[30]);
     vehicle->fuel_level_tenths_percent = read_u16_le(&payload[34]);
+    vehicle->ignition_deg = (int16_t)read_u16_le(&payload[36]);
+    vehicle->ethanol_tenths_percent = read_u16_le(&payload[38]);
+    vehicle->knock_count = read_u16_le(&payload[40]);
     return CLUSTER_PROTOCOL_OK;
 }
 
@@ -337,6 +343,12 @@ cluster_protocol_result_t cluster_left_settings_encode(
            sizeof(settings->value_channels));
     write_u32_le(&payload[37], settings->tach_rgb & 0x00FFFFFFU);
     payload[41] = settings->theme;
+    memcpy(&payload[42], settings->right_value_channels,
+           sizeof(settings->right_value_channels));
+    memcpy(&payload[45], settings->left_gauge_channels,
+           sizeof(settings->left_gauge_channels));
+    memcpy(&payload[51], settings->right_gauge_channels,
+           sizeof(settings->right_gauge_channels));
     return CLUSTER_PROTOCOL_OK;
 }
 
@@ -375,6 +387,12 @@ cluster_protocol_result_t cluster_left_settings_decode(
            sizeof(settings->value_channels));
     settings->tach_rgb = read_u32_le(&payload[37]) & 0x00FFFFFFU;
     settings->theme = payload[41];
+    memcpy(settings->right_value_channels, &payload[42],
+           sizeof(settings->right_value_channels));
+    memcpy(settings->left_gauge_channels, &payload[45],
+           sizeof(settings->left_gauge_channels));
+    memcpy(settings->right_gauge_channels, &payload[51],
+           sizeof(settings->right_gauge_channels));
     return CLUSTER_PROTOCOL_OK;
 }
 
@@ -618,4 +636,28 @@ cluster_protocol_result_t cluster_climate_state_decode(
     state->moving_mask = payload[8];
     state->fault_flags = payload[9];
     return CLUSTER_PROTOCOL_OK;
+}
+
+cluster_air_ride_command_code_t cluster_air_target_command(uint8_t target,
+                                                           bool raise)
+{
+    static const cluster_air_ride_command_code_t
+        commands[CLUSTER_AIR_TARGET_COUNT][2] = {
+        [CLUSTER_AIR_TARGET_ALL] = {CLUSTER_AIR_RIDE_ALL_DOWN,
+                                    CLUSTER_AIR_RIDE_ALL_UP},
+        [CLUSTER_AIR_TARGET_FRONT] = {CLUSTER_AIR_RIDE_FRONT_DOWN,
+                                      CLUSTER_AIR_RIDE_FRONT_UP},
+        [CLUSTER_AIR_TARGET_REAR] = {CLUSTER_AIR_RIDE_REAR_DOWN,
+                                     CLUSTER_AIR_RIDE_REAR_UP},
+        [CLUSTER_AIR_TARGET_FRONT_LEFT] = {CLUSTER_AIR_RIDE_FRONT_LEFT_DOWN,
+                                           CLUSTER_AIR_RIDE_FRONT_LEFT_UP},
+        [CLUSTER_AIR_TARGET_FRONT_RIGHT] = {CLUSTER_AIR_RIDE_FRONT_RIGHT_DOWN,
+                                            CLUSTER_AIR_RIDE_FRONT_RIGHT_UP},
+        [CLUSTER_AIR_TARGET_REAR_LEFT] = {CLUSTER_AIR_RIDE_REAR_LEFT_DOWN,
+                                          CLUSTER_AIR_RIDE_REAR_LEFT_UP},
+        [CLUSTER_AIR_TARGET_REAR_RIGHT] = {CLUSTER_AIR_RIDE_REAR_RIGHT_DOWN,
+                                           CLUSTER_AIR_RIDE_REAR_RIGHT_UP},
+    };
+    if (target >= CLUSTER_AIR_TARGET_COUNT) return CLUSTER_AIR_RIDE_RELEASE;
+    return commands[target][raise ? 1 : 0];
 }

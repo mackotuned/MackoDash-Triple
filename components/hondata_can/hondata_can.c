@@ -134,7 +134,10 @@ void hondata_apply_vehicle_fast(const hondata_state_t *hondata,
     const uint32_t frame_660 = 1UL << (0x660U - HONDATA_CAN_ID_FIRST);
     const uint32_t frame_661 = 1UL << (0x661U - HONDATA_CAN_ID_FIRST);
     const uint32_t frame_662 = 1UL << (0x662U - HONDATA_CAN_ID_FIRST);
+    const uint32_t frame_663 = 1UL << (0x663U - HONDATA_CAN_ID_FIRST);
     const uint32_t frame_664 = 1UL << (0x664U - HONDATA_CAN_ID_FIRST);
+    const uint32_t frame_665 = 1UL << (0x665U - HONDATA_CAN_ID_FIRST);
+    const uint32_t frame_669 = 1UL << (0x669U - HONDATA_CAN_ID_FIRST);
 
     if ((hondata->received_frame_mask & frame_660) != 0U) {
         vehicle->rpm = hondata->rpm;
@@ -158,6 +161,22 @@ void hondata_apply_vehicle_fast(const hondata_state_t *hondata,
         vehicle->valid_channels |=
             vehicle_data_channel_mask(VEHICLE_DATA_BOOST) |
             vehicle_data_channel_mask(VEHICLE_DATA_THROTTLE);
+    }
+    if ((hondata->received_frame_mask & frame_663) != 0U) {
+        vehicle->ignition_deg = hondata->ignition_angle_deg;
+        vehicle->valid_channels |=
+            vehicle_data_channel_mask(VEHICLE_DATA_IGNITION);
+    }
+    if ((hondata->received_frame_mask & frame_665) != 0U) {
+        vehicle->knock_count = hondata->knock_count;
+        vehicle->valid_channels |=
+            vehicle_data_channel_mask(VEHICLE_DATA_KNOCK);
+    }
+    if ((hondata->received_frame_mask & frame_669) != 0U) {
+        vehicle->ethanol_tenths_percent =
+            hondata->ethanol_content_tenths_percent;
+        vehicle->valid_channels |=
+            vehicle_data_channel_mask(VEHICLE_DATA_ETHANOL);
     }
     if ((hondata->received_frame_mask & frame_664) != 0U) {
         vehicle->afr_thousandths = hondata->afr_thousandths;
