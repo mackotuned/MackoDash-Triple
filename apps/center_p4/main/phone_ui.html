@@ -1,0 +1,1451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#070708">
+<!-- Home-screen app: Share > Add to Home Screen opens this full-screen. -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MackoDash">
+<meta name="application-name" content="MackoDash">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+<title>MackoTuned · MackoDash</title>
+<style>
+/* MackoTuned / MackoDash control surface — 3 tabs: Air Ride, Climate, Settings.
+   Air Ride and Climate fit the screen with no scrolling (portrait, landscape,
+   head unit). Compatibility: no flexbox gap, no inset, no aspect-ratio. */
+:root{
+  --bg:#070708;--panel:#121214;--panel2:#18181b;--line:#26262b;--line2:#34343a;
+  --ink:#f4f4f2;--muted:#8b8b93;--dim:#55555c;
+  --red:#e4002b;--red2:#ff1f45;--redglow:rgba(228,0,43,.35);
+  --acc:#e4002b;--acc-hi:#ff1f45;--acc-lo:#b0001e;--acc-glow:rgba(228,0,43,.35);--acc-tint:rgba(228,0,43,.15);--acc-ink:#fff;
+  --warn:#ff1f45;--warn-lo:#8a0019;--warn-line:#5a1020;--tank:#ff1f45;--cold:#3aa0ff;--mid:#7d5cff;--hot:#ff1f45;
+  --bgglow:rgba(228,0,43,.14);--tex:rgba(255,255,255,.014);
+  --amber:#ffb020;--green:#39ff8c;--blue:#3aa0ff;
+  --f-disp:"Roboto Condensed","sans-serif-condensed","Arial Narrow","Helvetica Neue",Arial,sans-serif;
+  --f-body:Roboto,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --top:58px;--bar:80px;--rail:0px;--pad:12px;
+  --st:0px;--sb:0px;--sl:0px;--sr:0px;
+}
+@supports (padding-top:env(safe-area-inset-top)){
+  :root{--st:env(safe-area-inset-top);--sb:env(safe-area-inset-bottom);--sl:env(safe-area-inset-left);--sr:env(safe-area-inset-right)}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg);-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;color:var(--ink);font:15px/1.35 var(--f-body);
+  background:radial-gradient(ellipse at 0 0,var(--bgglow) 0,transparent 45%),
+    repeating-linear-gradient(45deg,var(--tex) 0,var(--tex) 2px,transparent 2px,transparent 5px),var(--bg);
+  background-attachment:fixed;-webkit-user-select:none;user-select:none;overscroll-behavior:none}
+body.locked{overflow:hidden;position:fixed;left:0;right:0;top:0;bottom:0}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation;border:0;background:none;padding:0}
+svg{display:block}
+
+/* ---------- top bar ---------- */
+.top{position:fixed;z-index:20;top:0;left:0;right:0;height:calc(var(--top) + var(--st));display:flex;align-items:center;padding:var(--st) calc(14px + var(--sr)) 0 calc(14px + var(--sl));
+  background:rgba(7,7,8,.97);border-bottom:1px solid var(--line)}
+.top:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;
+  background:linear-gradient(90deg,var(--acc) 0,var(--acc) 120px,transparent 120px,transparent 128px,var(--acc) 128px,var(--acc) 148px,transparent 148px)}
+.mark{display:block;height:38px;width:auto;flex:none}
+.tag{margin-left:12px;padding-left:12px;border-left:1px solid var(--line2);font:700 11px/1 var(--f-disp);letter-spacing:.3em;color:var(--muted)}
+.top-right{margin-left:auto;display:flex;align-items:center}
+.chip{display:none;margin-right:8px;padding:5px 9px;border:1px solid var(--amber);color:var(--amber);border-radius:3px;font:700 10px/1 var(--f-disp);letter-spacing:.14em;transform:skewX(-10deg)}
+.chip.on{display:block}
+.save{margin-right:10px;font:700 10px/1 var(--f-disp);letter-spacing:.16em;color:var(--muted);opacity:0;transition:opacity .2s}
+.save.on{opacity:1}.save.bad{color:var(--warn)}
+.link{display:flex;align-items:center;height:32px;padding:0 13px;border:1px solid var(--line2);border-radius:16px;font:700 11px/1 var(--f-disp);letter-spacing:.16em;color:var(--muted);background:#0d0d0f}
+.link i{width:8px;height:8px;border-radius:50%;margin-right:8px;background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.link.live{color:var(--ink);border-color:#1f4d3a}.link.live i{background:var(--green);box-shadow:0 0 10px var(--green)}
+.link.offline{color:var(--warn);border-color:var(--warn-line)}.link.offline i{background:var(--warn);box-shadow:0 0 10px var(--warn);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.25}}
+
+/* ---------- navigation: 3 big tabs (bottom bar on portrait, rail on landscape) ---------- */
+.nav{position:fixed;z-index:30;left:0;right:0;bottom:0;height:calc(var(--bar) + var(--sb));display:flex;
+  padding-bottom:var(--sb);background:rgba(10,10,12,.98);border-top:1px solid var(--line)}
+.nav button{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);min-width:0}
+.nav svg{width:30px;height:30px;margin-bottom:6px}
+.nav span{font:800 italic 13px/1 var(--f-disp);letter-spacing:.14em;text-transform:uppercase}
+.nav button.on{color:var(--ink);background:linear-gradient(180deg,var(--acc-tint),transparent)}
+.nav button.on:before{content:"";position:absolute;top:0;left:18%;right:18%;height:3px;background:var(--acc);box-shadow:0 0 14px var(--acc)}
+.nav button.on svg{color:var(--acc-hi)}
+.main{padding-top:calc(var(--top) + var(--st));padding-bottom:calc(var(--bar) + var(--sb))}
+.page{display:none}
+.page.on{display:block;animation:rise .2s ease-out}
+.page.fit.on{display:flex;flex-direction:column;height:calc(100vh - var(--top) - var(--bar));height:calc(var(--vh,100vh) - var(--top) - var(--st) - var(--bar) - var(--sb));padding:var(--pad);overflow:hidden}
+@keyframes rise{from{opacity:0}}
+
+/* ---------- shared panel look ---------- */
+.panel{position:relative;background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:14px;min-width:0;min-height:0;overflow:hidden}
+.ptitle{position:absolute;left:14px;top:12px;font:800 italic 12px/1 var(--f-disp);letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+.ptitle:before{content:"";display:inline-block;width:12px;height:3px;margin-right:7px;vertical-align:3px;background:var(--acc);transform:skewX(-30deg)}
+
+/* ======================================================================
+   AIR RIDE
+   ====================================================================== */
+.air{flex:1;display:flex;flex-direction:column;min-height:0}
+.scr{position:relative;flex:0 0 37%;min-height:0;border-radius:18px;
+  background:radial-gradient(ellipse at 50% 0,#17171b 0,#060607 75%);border:1px solid #222227;
+  box-shadow:inset 0 2px 16px rgba(0,0,0,.9),inset 0 0 0 1px rgba(255,255,255,.03)}
+.scr svg{position:absolute;left:0;top:26px;width:100%;height:calc(100% - 30px)}
+.scr-bar{position:absolute;z-index:1;left:14px;right:14px;top:9px;display:flex;font:700 10px/1 var(--f-disp);letter-spacing:.18em;color:var(--dim)}
+.scr-bar b{margin-left:auto;color:var(--warn)}.scr-bar b.live{color:var(--green)}
+.scr text{font-family:var(--f-disp);font-style:italic;font-weight:800}
+.scr .lbl{font-style:normal;font-weight:700;font-size:9px;letter-spacing:2px;fill:#77777f}
+.scr .val{font-size:40px;fill:#f4f4f2}
+.scr .tankv{font-size:38px;fill:var(--tank)}
+.scr .box{fill:rgba(255,255,255,.025);stroke:#2c2c32;stroke-width:1.5}
+.scr .hit{cursor:pointer}
+.scr .hit.sel .box{stroke:var(--acc);stroke-width:2.5;fill:var(--acc-tint)}
+.scr .bar-bg{fill:#232328}.scr .bar-fg{fill:var(--acc)}
+.scr .axle{fill:none;stroke:var(--acc-hi);stroke-width:3;stroke-linecap:round;opacity:0}
+.scr .axle.on{opacity:1}
+
+.remote{flex:1;display:flex;flex-direction:column;min-height:0;margin-top:12px}
+.rm-main{flex:1;display:flex;min-height:0}
+.selcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:0}
+.axbtn{flex:none;width:72%;max-width:220px;height:44px;border-radius:22px;border:1px solid var(--line2);
+  background:linear-gradient(180deg,#232328,#15151a);font:800 italic 13px/1 var(--f-disp);letter-spacing:.2em;color:var(--muted);
+  box-shadow:0 2px 0 rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06)}
+.axbtn.on{color:var(--acc-ink);border-color:var(--acc);background:linear-gradient(180deg,var(--acc-hi),var(--acc-lo));box-shadow:0 0 18px var(--acc-glow)}
+.wheel{flex:1;width:100%;min-height:0;margin:8px 0}
+.wheel .q{fill:url(#qg);stroke:#000;stroke-width:1;cursor:pointer}
+.wheel .q.on{fill:url(#qr)}
+.wheel .ql{font:800 italic 17px var(--f-disp);fill:#9a9aa3;pointer-events:none;letter-spacing:1px}
+.wheel .ql.on{fill:#fff}
+.wheel .hub{fill:url(#hub);stroke:#3a3a42;stroke-width:1.5;cursor:pointer}
+.wheel .hub.on{fill:url(#qr);stroke:var(--acc-hi)}
+.wheel .hl{font:800 italic 20px var(--f-disp);fill:#cfcfd4;pointer-events:none;letter-spacing:2px}
+.wheel .hl.on{fill:#fff}
+.wheel .ring{fill:none;stroke:#2a2a30;stroke-width:2}
+
+.rocker{flex:0 0 36%;max-width:200px;display:flex;flex-direction:column;margin-left:12px;border-radius:60px;overflow:hidden;
+  border:1px solid #3a3a42;background:#0c0c0e;box-shadow:0 8px 24px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06)}
+.rocker button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:none;-webkit-touch-callout:none;
+  background:linear-gradient(180deg,#26262c,#17171b)}
+.rocker button+button{border-top:1px solid #000;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.rocker svg{width:46px;height:46px;color:var(--acc-hi)}
+.rocker b{margin-top:6px;font:800 italic 16px/1 var(--f-disp);letter-spacing:.16em}
+.rocker small{margin-top:4px;font:700 9px/1 var(--f-disp);letter-spacing:.24em;color:var(--muted)}
+.rocker button.act{background:linear-gradient(180deg,var(--acc-hi),var(--acc-lo));box-shadow:inset 0 0 30px rgba(0,0,0,.35)}
+.rocker button.act svg,.rocker button.act b{color:var(--acc-ink)}
+.rocker button:disabled{opacity:.28}
+
+.rm-foot{flex:none;display:flex;align-items:center;margin-top:12px}
+.comp{flex:1;display:flex;align-items:center;height:54px;padding:0 18px;border-radius:27px;border:1px solid var(--line2);
+  background:linear-gradient(180deg,#1e1e23,#121215);text-align:left}
+.comp i{width:12px;height:12px;border-radius:50%;margin-right:12px;background:#333;box-shadow:inset 0 1px 2px #000}
+.comp b{font:800 italic 15px/1 var(--f-disp);letter-spacing:.14em}
+.comp span{margin-left:auto;font:700 11px/1 var(--f-disp);letter-spacing:.18em;color:var(--muted)}
+.comp.on{border-color:#1f6b46}.comp.on i{background:var(--green);box-shadow:0 0 12px var(--green)}.comp.on span{color:var(--green)}
+.comp.ready i{background:#6b6b73}
+.comp:disabled{opacity:.35}
+.why{display:none}
+
+/* phone portrait: the whole tab is one machined remote */
+@media (orientation:portrait){
+  .air{padding:12px;border-radius:38px;border:1px solid #2c2c32;
+    background:linear-gradient(165deg,#2a2a30 0,#17171b 38%,#0e0e10 100%);
+    box-shadow:0 18px 40px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.09),inset 0 -1px 0 rgba(0,0,0,.8)}
+  .air:before{content:"";display:block;flex:none;width:44px;height:4px;margin:0 auto 10px;border-radius:2px;background:#3a3a42}
+  .scr{border-radius:24px}
+}
+/* landscape (head unit, tablet, phone sideways): display left, remote right */
+@media (orientation:landscape){
+  .air{flex-direction:row}
+  .scr{flex:1.15 1 0;border-radius:16px}
+  .remote{flex:1 1 0;margin:0 0 0 12px;padding:12px;border-radius:16px;border:1px solid var(--line);
+    background:linear-gradient(165deg,#202025,#121214)}
+}
+
+/* ======================================================================
+   CLIMATE
+   ====================================================================== */
+.clim{flex:1;display:flex;flex-direction:column;min-height:0}
+.c-temp{flex:1 1 46%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 12px}
+.c-fan,.c-mode{flex:none;margin-top:12px;padding:38px 10px 10px}
+.cstat{position:absolute;right:12px;top:10px;padding:5px 9px;border-radius:3px;font:800 10px/1 var(--f-disp);letter-spacing:.16em;background:var(--amber);color:#000}
+.cstat.live{background:var(--green)}.cstat.off{background:var(--warn);color:#fff}.cstat.chk{background:#444;color:#ddd}
+.cnote{position:absolute;left:0;right:0;bottom:10px;text-align:center;font:700 10px/1.3 var(--f-disp);letter-spacing:.14em;color:var(--amber)}
+.dialbox{flex:1;width:100%;min-height:0;display:flex;align-items:center;justify-content:center;margin-top:20px}
+.dial{height:100%;max-height:300px;width:100%;touch-action:none;cursor:pointer}
+.dial .track{fill:none;stroke:#1d1d22;stroke-width:22;stroke-linecap:round}
+.dial .grad{fill:none;stroke:url(#tg);stroke-width:14;stroke-linecap:round}
+.dial .tick{stroke:#3a3a42;stroke-width:2}
+.dial .knob{fill:#fff;stroke:#070708;stroke-width:5}
+.dial .big{font:800 italic 58px var(--f-disp);fill:#f4f4f2}
+.dial .word{font:700 12px var(--f-disp);letter-spacing:4px;fill:#8b8b93}
+.tbtns{flex:none;display:flex;width:100%;max-width:360px;margin:6px 0 26px}
+.tbtns button{flex:1;height:52px;border-radius:26px;border:1px solid var(--line2);background:linear-gradient(180deg,#232328,#15151a);font:800 italic 15px/1 var(--f-disp);letter-spacing:.16em}
+.tbtns button+button{margin-left:12px}
+.tbtns .cold{color:var(--cold)}.tbtns .hot{color:var(--hot)}
+.bank{display:flex}
+.bank button{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:64px;border-radius:12px;border:1px solid var(--line2);
+  background:linear-gradient(180deg,#1f1f24,#131316);color:var(--muted)}
+.bank button+button{margin-left:8px}
+.bank b{font:800 italic 20px/1 var(--f-disp)}
+.bank small{display:block;margin-top:5px;font:700 9px/1 var(--f-disp);letter-spacing:.12em}
+.bank svg{width:30px;height:30px}
+.bank button.on{color:var(--acc-ink);border-color:var(--acc);background:linear-gradient(180deg,var(--acc-hi),var(--acc-lo));box-shadow:0 0 16px var(--acc-glow)}
+.bank.modes button{height:76px}
+.fanico{display:none}
+.fanico svg{animation:spin 1s linear infinite;animation-play-state:paused}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (orientation:landscape){
+  .clim{flex-direction:row}
+  .c-temp{flex:1.25 1 0;order:2;margin:0 12px}
+  .c-fan{order:1}.c-mode{order:3}
+  .c-fan,.c-mode{flex:1 1 0;margin-top:0;display:flex;flex-direction:column;padding-top:40px}
+  .c-fan .bank{flex:1;flex-direction:column-reverse}
+  .c-mode .bank{flex:1;flex-direction:column}
+  .bank button,.bank.modes button{height:auto;flex:1;flex-direction:row;justify-content:flex-start;padding:0 16px}
+  .bank button+button{margin-left:0;margin-bottom:0}
+  .c-fan .bank button+button{margin-bottom:8px}
+  .c-mode .bank button+button{margin-top:8px}
+  .bank small{margin:0 0 0 12px;font-size:12px;letter-spacing:.14em}
+  .bank svg{margin-right:2px}
+  .c-fan .bank button{justify-content:center}
+  .fanico{display:block;position:absolute;right:12px;top:8px;width:24px;height:24px;color:var(--acc-hi)}
+}
+
+/* ======================================================================
+   SETTINGS (scrolls)
+   ====================================================================== */
+#settings{padding:0 14px 30px;max-width:1240px;margin:0 auto}
+.jump{position:-webkit-sticky;position:sticky;top:calc(var(--top) + var(--st));z-index:10;display:flex;overflow-x:auto;margin:0 -14px 6px;padding:10px 14px;
+  background:rgba(7,7,8,.96);border-bottom:1px solid var(--line);scrollbar-width:none}
+.jump::-webkit-scrollbar{display:none}
+.jump button{flex:none;height:40px;padding:0 18px;margin-right:8px;border-radius:20px;border:1px solid var(--line2);background:#111114;
+  font:800 italic 13px/1 var(--f-disp);letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+.jump button.on{color:var(--acc-ink);border-color:var(--acc);background:var(--acc)}
+.group{padding-top:14px}
+.gh{display:flex;align-items:center;margin:14px 0 4px}
+.gh h2{margin:0;font:800 italic 26px/1 var(--f-disp);letter-spacing:.04em;text-transform:uppercase}
+.gh:after{content:"";flex:1;height:2px;margin-left:14px;background:linear-gradient(90deg,var(--line2),transparent)}
+.grid{display:grid;grid-template-columns:1fr;grid-gap:12px;gap:12px}
+.sec{margin-top:18px}
+.sec-h{display:flex;align-items:center;margin:0 0 10px;font:700 12px/1 var(--f-disp);letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+.sec-h:before{content:"";width:14px;height:3px;margin-right:8px;background:var(--acc);transform:skewX(-30deg)}
+.card{position:relative;background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0;overflow:hidden}
+.card:before{content:"";position:absolute;top:0;left:16px;width:34px;height:3px;background:var(--acc);transform:skewX(-30deg)}
+.card h3{margin:2px 0 6px;font:700 italic 15px/1.1 var(--f-disp);letter-spacing:.06em;text-transform:uppercase}
+.card .sub{margin:-2px 0 6px;color:var(--muted);font-size:11px}
+.row{display:flex;align-items:center;min-height:62px;padding:8px 0;border-top:1px solid rgba(255,255,255,.05)}
+.card h3+.row,.card .sub+.row,.row:first-child{border-top:0}
+.row .lab{flex:1;min-width:0;padding-right:12px}
+.row .lab b{display:block;font-weight:600;font-size:15px}
+.row .lab small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.row.stack{display:block}.row.stack .lab{padding:0 0 8px}
+.sw{position:relative;width:62px;height:34px;border-radius:17px;background:#2a2a30;border:1px solid var(--line2);flex:none;transition:background .15s}
+.sw:after{content:"";position:absolute;left:3px;top:3px;width:26px;height:26px;border-radius:50%;background:#d8d8dc;transition:transform .15s}
+.sw.on{background:var(--acc);border-color:var(--acc);box-shadow:0 0 14px var(--acc-glow)}
+.sw.on:after{transform:translateX(28px);background:#fff}
+.seg{display:flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden;background:#0d0d0f;flex:none}
+.seg button{min-width:58px;height:48px;padding:0 12px;font:700 13px/1 var(--f-disp);letter-spacing:.1em;color:var(--muted);border-left:1px solid var(--line2);text-transform:uppercase}
+.seg button:first-child{border-left:0}
+.seg button.on{background:var(--acc);color:var(--acc-ink)}
+.seg.wide{display:flex;width:100%}.seg.wide button{flex:1;min-width:0;padding:0 4px}
+.stp{display:flex;align-items:center;flex:none;border:1px solid var(--line2);border-radius:8px;background:#0d0d0f}
+.stp button{width:52px;height:52px;font:400 28px/1 var(--f-body)}
+.stp button:active{background:var(--acc)}
+.stp output{min-width:96px;text-align:center;font:700 italic 22px/52px var(--f-disp);font-variant-numeric:tabular-nums;border-left:1px solid var(--line2);border-right:1px solid var(--line2)}
+.stp output small{font-size:12px;color:var(--muted);margin-left:2px;font-style:normal}
+.stp.caution output{color:var(--amber)}.stp.critical output{color:var(--warn)}
+.sl{display:flex;align-items:center;width:100%}
+.sl output{width:64px;text-align:right;font:700 italic 22px/1 var(--f-disp)}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;width:100%;height:48px;margin:0 14px 0 0;background:transparent;--fill:50%}
+input[type=range]:focus{outline:none}
+input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:4px;background:linear-gradient(90deg,var(--acc) 0,var(--acc) var(--fill),#2a2a30 var(--fill),#2a2a30 100%)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:32px;height:32px;margin-top:-12px;border-radius:50%;background:#fff;border:5px solid var(--acc);box-shadow:0 0 0 5px var(--acc-tint)}
+input[type=range]::-moz-range-track{height:8px;border-radius:4px;background:#2a2a30}
+input[type=range]::-moz-range-progress{height:8px;border-radius:4px;background:var(--acc)}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:5px solid var(--acc)}
+input[type=range]:disabled{opacity:.35}
+.selwrap{position:relative;flex:none;min-width:160px}
+.selwrap:after{content:"";position:absolute;right:14px;top:50%;width:8px;height:8px;margin-top:-6px;border-right:2px solid var(--acc);border-bottom:2px solid var(--acc);transform:rotate(45deg);pointer-events:none}
+select{-webkit-appearance:none;appearance:none;width:100%;height:48px;padding:0 36px 0 12px;border:1px solid var(--line2);border-radius:8px;background:#0d0d0f;font:700 13px/1 var(--f-disp);letter-spacing:.06em;text-transform:uppercase}
+select option{background:#121214;color:var(--ink)}
+.colors{display:flex;flex-wrap:wrap;align-items:center}
+.colors button{width:38px;height:38px;margin:0 9px 9px 0;border-radius:50%;border:2px solid rgba(255,255,255,.12)}
+.colors button.on{border-color:#fff;box-shadow:0 0 0 3px var(--bg),0 0 0 5px currentColor}
+.colors label{position:relative;width:38px;height:38px;margin:0 9px 9px 0;border-radius:50%;border:2px dashed var(--line2);overflow:hidden}
+.colors label:after{content:"+";position:absolute;left:0;right:0;top:0;bottom:0;text-align:center;font:300 24px/34px var(--f-body);color:var(--muted);pointer-events:none}
+.colors input{position:absolute;left:-10px;top:-10px;width:60px;height:60px;opacity:0;cursor:pointer}
+.hex{font:700 12px/1 var(--f-disp);letter-spacing:.1em;color:var(--muted);margin:0 0 8px 2px}
+.bright .big{font:800 italic 46px/1 var(--f-disp)}
+.bright .big small{font-size:18px;color:var(--muted)}
+.bright .sl output{display:none}.bright input[type=range]{margin-right:0}.bright .row .lab{display:none}
+.tach{position:relative;height:96px;margin:6px 4px 4px}
+.tach .scale{position:absolute;left:0;right:0;top:34px;height:16px;background:#1d1d21;border-radius:2px;overflow:hidden}
+.tach .vtec-zone{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,rgba(255,176,32,.25),rgba(255,176,32,.08))}
+.tach .red-zone{position:absolute;top:0;bottom:0;right:0;background:repeating-linear-gradient(-45deg,var(--warn) 0,var(--warn) 6px,var(--warn-lo) 6px,var(--warn-lo) 10px)}
+.tach .tick{position:absolute;top:52px;width:1px;height:10px;background:var(--line2)}
+.tach .tick span{position:absolute;top:13px;left:-10px;width:20px;text-align:center;font:700 italic 12px/1 var(--f-disp);color:var(--muted)}
+.tach .vt{position:absolute;top:2px;margin-left:-22px;width:44px;text-align:center;font:900 italic 14px/1 var(--f-disp);color:var(--warn)}
+.tach .vt:after{content:"";display:block;width:2px;height:20px;margin:4px auto 0;background:var(--amber)}
+.tach .st{position:absolute;top:36px;width:12px;height:12px;margin-left:-6px;border-radius:50%;border:2px solid #000;box-shadow:0 0 8px currentColor}
+.tach .rl{position:absolute;top:84px;margin-left:-30px;width:60px;text-align:center;font:700 10px/1 var(--f-disp);letter-spacing:.14em;color:var(--warn)}
+.wbar{position:relative;height:10px;margin:4px 0 10px;border-radius:5px;background:#1f3a2c;overflow:hidden}
+.wbar i{position:absolute;top:0;bottom:0}
+.wbar .c{background:var(--amber)}.wbar .x{background:var(--warn)}
+.wscale{display:flex;justify-content:space-between;margin-top:-6px;margin-bottom:6px;font:700 italic 11px/1 var(--f-disp);color:var(--dim)}
+.wdir{display:inline-block;margin-left:8px;padding:2px 6px;border-radius:3px;background:#202024;color:var(--muted);font:700 9px/1.3 var(--f-disp);letter-spacing:.12em;font-style:normal;vertical-align:2px}
+.btn{display:inline-block;height:50px;padding:0 20px;border:1px solid var(--line2);border-radius:8px;background:#0d0d0f;font:700 13px/50px var(--f-disp);letter-spacing:.14em;text-transform:uppercase}
+.btn.red{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.btn.ghost-red{border-color:var(--warn-line);color:var(--warn)}
+.kv{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid rgba(255,255,255,.05);font-size:13px}
+.kv:first-of-type{border-top:0}.kv span{color:var(--muted)}
+.kv b{font:700 italic 15px/1 var(--f-disp)}
+@media (min-width:760px){.grid.c2{grid-template-columns:1fr 1fr}.grid.c3{grid-template-columns:1fr 1fr 1fr}}
+
+/* ---------- misc ---------- */
+.toast{position:fixed;z-index:50;left:50%;bottom:calc(var(--bar) + var(--sb) + 18px);max-width:90%;padding:12px 18px;border-radius:6px;background:#f4f4f2;color:#111;
+  font:700 12px/1.2 var(--f-disp);letter-spacing:.1em;text-transform:uppercase;transform:translate(-50%,16px);opacity:0;transition:.2s;pointer-events:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}.toast.bad{background:var(--warn);color:#fff}
+.modal{position:fixed;z-index:60;left:0;top:0;right:0;bottom:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.72)}
+.modal.on{display:flex}
+.modal .card{width:340px;max-width:90%;padding:20px}
+.modal .acts{display:flex;justify-content:flex-end;margin-top:18px}
+.modal .acts .btn{margin-left:8px}
+
+/* landscape: left rail */
+@media (orientation:landscape){
+  :root{--bar:0px;--rail:112px}
+  .nav{top:calc(var(--top) + var(--st));bottom:0;right:auto;width:calc(var(--rail) + var(--sl));height:auto;flex-direction:column;padding:8px 0 var(--sb) var(--sl);border-top:0;border-right:1px solid var(--line)}
+  .nav button{max-height:170px}
+  .nav button.on{background:linear-gradient(90deg,var(--acc-tint),transparent)}
+  .nav button.on:before{top:18%;bottom:18%;left:0;right:auto;width:3px;height:auto}
+  .main{margin-left:calc(var(--rail) + var(--sl))}
+  .page.fit.on{padding-right:calc(var(--pad) + var(--sr))}
+  .toast{bottom:22px;margin-left:calc(var(--rail) / 2)}
+}
+/* short landscape (phone sideways) */
+@media (orientation:landscape) and (max-height:500px){
+  :root{--top:46px;--rail:92px;--pad:8px}
+  .mark{height:30px}
+  .nav svg{width:26px;height:26px}.nav span{font-size:11px}
+  .scr-bar{top:7px}
+  .remote{padding:8px}
+  .axbtn{height:34px}
+  .wheel{margin:4px 0}
+  .rm-foot{margin-top:8px}.comp{height:44px}
+  .rocker svg{width:34px;height:34px}.rocker b{font-size:14px}
+  .tbtns{margin:2px 0 8px}.tbtns button{height:42px}
+  .dial .big{font-size:52px}
+  .c-fan,.c-mode{padding-top:34px}
+  .cnote{display:none}
+}
+@media (max-width:420px){
+  .tag{display:none}
+  .stp output{min-width:80px;font-size:20px}.stp button{width:46px}
+  .seg button{min-width:46px;padding:0 8px}
+}
+
+/* ---------- SVG colours follow the theme ---------- */
+.carhl{stroke:var(--acc);stroke-width:4;stroke-linecap:round}
+.tankbox{fill:rgba(6,6,7,.94);stroke:var(--warn-line);stroke-width:1.5}
+.s-hi{stop-color:var(--acc-hi)}.s-lo{stop-color:var(--acc-lo)}
+.s-cold{stop-color:var(--cold)}.s-mid{stop-color:var(--mid)}.s-hot{stop-color:var(--hot)}
+.dial .big.cold{fill:var(--cold)}.dial .big.hot{fill:var(--hot)}
+
+/* ---------- theme picker ---------- */
+.themes{display:grid;grid-template-columns:1fr 1fr;grid-gap:12px;gap:12px;margin:6px 0 4px}
+.tcard{position:relative;display:block;width:100%;padding:0 0 12px;border-radius:12px;border:2px solid var(--line2);background:#0d0d0f;text-align:left;overflow:hidden}
+.tcard.on{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-tint)}
+.tcard svg{width:100%;height:150px;display:block;margin-top:8px}
+.tcard b{display:block;margin:10px 14px 0;font:800 italic 17px/1 var(--f-disp);letter-spacing:.1em;text-transform:uppercase}
+.tcard small{display:block;margin:4px 14px 0;color:var(--muted);font-size:11px}
+.tcard .tick{position:absolute;right:10px;top:10px;width:26px;height:26px;border-radius:50%;background:var(--acc);color:var(--acc-ink);
+  font:700 16px/26px var(--f-body);text-align:center;opacity:0}
+.tcard.on .tick{opacity:1}
+
+/* ======================================================================
+   GRAPHITE theme — matches the Graphite dashboard: flat graphite face,
+   ice-blue accent, coral warning, upright DIN-style lettering.
+   ====================================================================== */
+html.graphite{
+  --bg:#090a0c;--panel:#14171b;--panel2:#1a1e23;--line:#262a30;--line2:#363c44;
+  --ink:#eef0f2;--muted:#868d97;--dim:#5a616b;
+  --acc:#5ec8f2;--acc-hi:#7fd5f6;--acc-lo:#2f9fcc;--acc-glow:rgba(94,200,242,.3);--acc-tint:rgba(94,200,242,.13);--acc-ink:#0c0e11;
+  --warn:#ff564a;--warn-lo:#7a2a24;--warn-line:#3a2a2c;--tank:#eef0f2;--cold:#5ec8f2;--mid:#9aa3ad;--hot:#ff564a;
+  --amber:#5ec8f2;--green:#61d6a3;--blue:#5ec8f2;
+  --bgglow:rgba(94,200,242,.05);--tex:transparent;
+  --f-disp:Bahnschrift,"DIN Alternate","DIN Next LT Pro",Barlow,Roboto,"Segoe UI",Arial,sans-serif;
+}
+html.graphite *{font-style:normal!important}
+html.graphite .card:before,html.graphite .sec-h:before,html.graphite .ptitle:before{transform:none;border-radius:2px}
+html.graphite .chip{transform:none}
+html.graphite .top:after{background:linear-gradient(90deg,var(--acc) 0,var(--acc) 120px,transparent 220px)}
+html.graphite .scr .val,html.graphite .scr .tankv,html.graphite .dial .big,html.graphite .bright .big,
+html.graphite .stp output,html.graphite .readout strong{font-weight:300}
+html.graphite .scr{background:radial-gradient(ellipse at 50% 0,#171a1f 0,#08090b 75%);border-color:#22262c}
+html.graphite .scr .box{fill:rgba(255,255,255,.02);stroke:#2a2f36}
+html.graphite .scr .tankv{font-size:42px}
+html.graphite .tankbox{fill:rgba(9,10,12,.95);stroke:#2f353d}
+html.graphite .scr .bar-bg{fill:#22262c}
+html.graphite .rocker button,html.graphite .axbtn,html.graphite .comp,html.graphite .tbtns button,html.graphite .bank button{background:linear-gradient(180deg,#1d2126,#14171b)}
+html.graphite .rocker{border-color:#363c44;background:#0b0c0e}
+html.graphite .rocker button.act,html.graphite .bank button.on,html.graphite .axbtn.on{background:var(--acc);box-shadow:0 0 18px var(--acc-glow)}
+html.graphite .rocker button.act b,html.graphite .rocker button.act small{color:var(--acc-ink)}
+html.graphite .bank button.on small,html.graphite .bank button.on b{color:var(--acc-ink)}
+html.graphite .dial .track{stroke:#1c2025}
+html.graphite .dial .knob{stroke:#090a0c}
+html.graphite .wheel .ql.on,html.graphite .wheel .hl.on{fill:var(--acc-ink)}
+html.graphite .remote{background:linear-gradient(165deg,#1b1f24,#121418)}
+@media (orientation:portrait){
+  html.graphite .air{background:linear-gradient(165deg,#252a31 0,#171a1f 38%,#0e1013 100%);border-color:#2c3239}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <img class="mark" alt="MackoTuned" src="data:image/webp;base64,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">
+  <span class="tag">MACKODASH</span>
+  <div class="top-right">
+    <span class="chip" id="simChip">SIM</span>
+    <span class="save" id="save">SAVED</span>
+    <span class="link" id="link"><i></i><span>CONNECTING</span></span>
+  </div>
+</header>
+<nav class="nav" id="nav"></nav>
+<main class="main" id="main"></main>
+<div class="toast" id="toast"></div>
+<div class="modal" id="modal"><div class="card"><h3 id="modalTitle"></h3><div class="sub" id="modalText"></div>
+  <div class="acts"><button class="btn" id="modalNo">Cancel</button><button class="btn red" id="modalYes">Confirm</button></div></div></div>
+<script>
+'use strict';
+/* MackoDash control UI.
+   Targets old Android WebViews (car head units): ES2017 syntax only — no
+   optional chaining, nullish coalescing, object spread or optional catch
+   binding. Everything is inline; the ESP has no Internet. */
+
+if (!Element.prototype.replaceChildren) {
+  Element.prototype.replaceChildren = function () {
+    while (this.firstChild) this.removeChild(this.firstChild);
+    for (var i = 0; i < arguments.length; i++) this.appendChild(arguments[i]);
+  };
+}
+
+// ======================================================================
+// Small helpers
+// ======================================================================
+function $(id) { return document.getElementById(id); }
+function h(tag, attrs, kids) {
+  var el = document.createElement(tag);
+  if (attrs) {
+    Object.keys(attrs).forEach(function (k) {
+      var v = attrs[k];
+      if (v == null || v === false) return;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k === 'html') el.innerHTML = v;
+      else if (k.slice(0, 2) === 'on') el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : v);
+    });
+  }
+  if (kids != null) {
+    (Array.isArray(kids) ? kids : [kids]).forEach(function (c) {
+      if (c == null || c === false) return;
+      el.appendChild(typeof c === 'object' ? c : document.createTextNode(String(c)));
+    });
+  }
+  return el;
+}
+function getPath(obj, key) {
+  return key.split('.').reduce(function (v, p) { return v == null ? undefined : v[p]; }, obj);
+}
+function setPath(obj, key, value) {
+  var parts = key.split('.'), o = obj;
+  for (var i = 0; i < parts.length - 1; i++) { if (o == null) return; o = o[parts[i]]; }
+  if (o != null) o[parts[parts.length - 1]] = value;
+}
+function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+function hex(n) { return '#' + ('000000' + (Number(n) >>> 0).toString(16)).slice(-6); }
+function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+
+var toastTimer;
+function toast(text, bad) {
+  var el = $('toast');
+  el.textContent = text;
+  el.className = 'toast on' + (bad ? ' bad' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { el.className = 'toast' + (bad ? ' bad' : ''); }, bad ? 2600 : 1600);
+}
+function confirmBox(title, text, yes) {
+  $('modalTitle').textContent = title;
+  $('modalText').textContent = text;
+  $('modal').className = 'modal on';
+  $('modalYes').onclick = function () { $('modal').className = 'modal'; yes(); };
+  $('modalNo').onclick = function () { $('modal').className = 'modal'; };
+}
+
+// One press/hold abstraction for Pointer Events with touch + mouse fallback.
+var HAS_POINTER = !!window.PointerEvent;
+function onPress(el, down, up) {
+  var active = false;
+  function start(e) {
+    if (active || el.disabled) return;
+    if (e.button != null && e.button > 0) return;
+    active = true;
+    if (e.cancelable) e.preventDefault();
+    if (HAS_POINTER && e.pointerId != null) { try { if (el.setPointerCapture) el.setPointerCapture(e.pointerId); } catch (err) {} }
+    down(e);
+  }
+  function end() { if (!active) return; active = false; up(); }
+  if (HAS_POINTER) {
+    el.addEventListener('pointerdown', start);
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (t) { el.addEventListener(t, end); });
+  } else {
+    el.addEventListener('touchstart', start, { passive: false });
+    ['touchend', 'touchcancel', 'mouseup', 'mouseleave'].forEach(function (t) { el.addEventListener(t, end); });
+    el.addEventListener('mousedown', start);
+  }
+  el.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  return end;
+}
+function repeatPress(el, fn) {
+  var t1, t2;
+  onPress(el, function () {
+    fn();
+    t1 = setTimeout(function () { t2 = setInterval(fn, 70); }, 380);
+  }, function () { clearTimeout(t1); clearInterval(t2); });
+}
+
+// ======================================================================
+// Network: timeouts, link health, serial settings saves
+// ======================================================================
+var S = { settings: null, air: null, page: 'display' };
+var net = { ok: 0, fail: 0, streak: 0 };
+
+function fetchWithTimeout(url, options, ms) {
+  if (typeof AbortController === 'undefined') return fetch(url, options);
+  var ctl = new AbortController();
+  var timer = setTimeout(function () { ctl.abort(); }, ms);
+  options.signal = ctl.signal;
+  return fetch(url, options).then(function (r) { clearTimeout(timer); return r; },
+    function (e) { clearTimeout(timer); throw e; });
+}
+function setLink(state) {
+  var el = $('link');
+  el.className = 'link ' + state;
+  el.lastChild.textContent = state === 'live' ? 'LIVE' : state === 'offline' ? 'OFFLINE' : 'CONNECTING';
+}
+// Resolves to {ok, status, json, unavailable}; never rejects.
+// "unavailable" = endpoint not in this firmware (404 or captive-portal redirect).
+function request(method, url, body, ms, extra) {
+  var opts = { method: method, cache: 'no-store', headers: {} };
+  if (extra && extra.manualRedirect) opts.redirect = 'manual';
+  if (body != null) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  return fetchWithTimeout(url, opts, ms || 2500).then(function (res) {
+    net.ok++; net.streak = 0; setLink('live');
+    var redirected = res.type === 'opaqueredirect' || res.redirected;
+    return res.text().then(function (text) {
+      var json = null;
+      try { json = text ? JSON.parse(text) : null; } catch (e) { json = null; }
+      return { ok: res.ok && !redirected, status: res.status, json: json, text: text,
+               unavailable: redirected || res.status === 404 || res.status === 501 };
+    });
+  }, function () {
+    net.fail++; net.streak++;
+    if (net.streak >= 2) setLink('offline');
+    return { ok: false, status: 0, json: null, text: '', unavailable: false };
+  });
+}
+
+// Settings saves: per-key coalescing, one request at a time, server is authoritative.
+var pending = {}, pendingOrder = [], saving = false, saveTimer = null, busyKeys = {};
+function setLocal(key, value) { if (S.settings) setPath(S.settings, key, value); }
+function queueSave(key, value) {
+  if (!S.settings) return;
+  setLocal(key, value);
+  busyKeys[key] = Date.now() + 1500;
+  if (!(key in pending)) pendingOrder.push(key);
+  pending[key] = value;
+  saveBadge('SAVING', false);
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flushSaves, 260);
+  refreshDerived();
+}
+function flushSaves() {
+  if (saving || !pendingOrder.length) return;
+  var key = pendingOrder.shift(), value = pending[key];
+  delete pending[key];
+  saving = true;
+  request('POST', '/api/settings', { key: key, value: value }, 3500).then(function (r) {
+    saving = false;
+    if (r.ok && r.json) {
+      S.settings = r.json;
+      var stored = getPath(r.json, key);
+      if (stored !== undefined && stored !== value && typeof value !== 'boolean') toast('Adjusted to allowed range');
+      if (!pendingOrder.length) saveBadge('SAVED', false);
+    } else if (r.status === 400) {
+      toast('Rejected by MackoDash', true); saveBadge('REJECTED', true); reloadSettings();
+    } else {
+      toast('Save failed — not stored', true); saveBadge('SAVE FAILED', true); reloadSettings();
+    }
+    if (!pendingOrder.length) { busyKeys = {}; syncAll(); }
+    flushSaves();
+  });
+}
+var badgeTimer;
+function saveBadge(text, bad) {
+  var el = $('save');
+  el.textContent = text;
+  el.className = 'save on' + (bad ? ' bad' : '');
+  clearTimeout(badgeTimer);
+  if (text !== 'SAVING') badgeTimer = setTimeout(function () { el.className = 'save'; }, 1800);
+}
+function reloadSettings() {
+  return request('GET', '/api/settings', null, 3500).then(function (r) {
+    if (r.ok && r.json) { S.settings = r.json; syncAll(); return true; }
+    return false;
+  });
+}
+function loadSettings() {
+  reloadSettings().then(function (ok) {
+    if (!ok) { setTimeout(loadSettings, 2000); return; }
+  });
+}
+
+// ======================================================================
+// Controls — each registers a sync() that redraws from S.settings
+// ======================================================================
+var syncers = [];
+function bind(fn) { syncers.push(fn); return fn; }
+function isBusy(key) { return busyKeys[key] && busyKeys[key] > Date.now(); }
+function syncAll() {
+  syncers.forEach(function (fn) { try { fn(); } catch (e) { /* keep others alive */ } });
+  refreshDerived();
+}
+function row(label, hint, control, stack) {
+  return h('div', { class: 'row' + (stack ? ' stack' : '') }, [
+    h('div', { class: 'lab' }, [h('b', { text: label }), hint ? h('small', { text: hint }) : null]),
+    control
+  ]);
+}
+function toggle(key, label, hint) {
+  var sw = h('button', { class: 'sw', role: 'switch', 'aria-label': label });
+  sw.addEventListener('click', function () {
+    if (!S.settings) return;
+    var v = !getPath(S.settings, key);
+    sw.className = 'sw' + (v ? ' on' : '');
+    queueSave(key, v);
+  });
+  bind(function () {
+    var v = !!(S.settings && getPath(S.settings, key));
+    sw.className = 'sw' + (v ? ' on' : '');
+    sw.setAttribute('aria-checked', v ? 'true' : 'false');
+  });
+  return row(label, hint, sw);
+}
+function segmented(key, label, items, hint, wide) {
+  var box = h('div', { class: 'seg' + (wide ? ' wide' : '') });
+  var buttons = items.map(function (text, i) {
+    var b = h('button', { text: text });
+    b.addEventListener('click', function () {
+      if (!S.settings) return;
+      queueSave(key, items.vals ? items.vals[i] : i);
+      paint();
+    });
+    box.appendChild(b);
+    return b;
+  });
+  function paint() {
+    var v = S.settings ? getPath(S.settings, key) : null;
+    buttons.forEach(function (b, i) {
+      var val = items.vals ? items.vals[i] : i;
+      b.className = val === v ? 'on' : '';
+    });
+  }
+  bind(paint);
+  return row(label, hint, box, wide);
+}
+function boolSeg(key, label, offText, onText) {
+  var items = [offText, onText];
+  items.vals = [false, true];
+  return segmented(key, label, items);
+}
+// o: {min,max,step,scale,suffix,dec,tone}; min/max/step in display units.
+function stepper(key, label, o, hint) {
+  var scale = o.scale || 1, dec = o.dec || 0;
+  var out = h('output');
+  var minus = h('button', { 'aria-label': 'Decrease ' + label, text: '−' });
+  var plus = h('button', { 'aria-label': 'Increase ' + label, text: '+' });
+  function raw() { return S.settings ? Number(getPath(S.settings, key)) : NaN; }
+  function show(rawValue) {
+    if (isNaN(rawValue)) { out.replaceChildren(document.createTextNode('--')); return; }
+    out.replaceChildren(document.createTextNode((rawValue / scale).toFixed(dec)),
+      o.suffix ? h('small', { text: o.suffix }) : document.createTextNode(''));
+  }
+  function nudge(d) {
+    if (!S.settings) return;
+    var stepRaw = Math.round(o.step * scale);
+    var next = Math.round(raw() / stepRaw) * stepRaw + d * stepRaw;
+    next = clamp(next, Math.round(o.min * scale), Math.round(o.max * scale));
+    show(next);
+    queueSave(key, next);
+  }
+  repeatPress(minus, function () { nudge(-1); });
+  repeatPress(plus, function () { nudge(1); });
+  bind(function () { if (!isBusy(key)) show(raw()); });
+  return row(label, hint, h('div', { class: 'stp' + (o.tone ? ' ' + o.tone : '') }, [minus, out, plus]));
+}
+function slider(key, label, o, hint) {
+  var input = h('input', { type: 'range', min: o.min, max: o.max, step: o.step || 1, 'aria-label': label });
+  var out = h('output', { class: 'num' });
+  var dragging = false;
+  function paint(v) {
+    out.textContent = v + (o.suffix || '');
+    input.style.setProperty('--fill', ((v - o.min) / (o.max - o.min) * 100) + '%');
+  }
+  input.addEventListener('input', function () {
+    if (!S.settings) return;
+    var v = Number(input.value);
+    paint(v);
+    if (o.keys) o.keys.forEach(function (k) { queueSave(k, v); }); else queueSave(key, v);
+  });
+  input.addEventListener('pointerdown', function () { dragging = true; });
+  input.addEventListener('touchstart', function () { dragging = true; }, { passive: true });
+  ['change', 'pointerup', 'touchend'].forEach(function (t) { input.addEventListener(t, function () { dragging = false; }); });
+  bind(function () {
+    input.disabled = !S.settings;
+    if (!S.settings || dragging || isBusy(key)) return;
+    var v = Number(getPath(S.settings, key));
+    if (o.keys) v = Math.round(o.keys.reduce(function (a, k) { return a + Number(getPath(S.settings, k)); }, 0) / o.keys.length);
+    input.value = v;
+    paint(v);
+  });
+  return row(label, hint, h('div', { class: 'sl' }, [input, out]), true);
+}
+function select(key, label, items, hint) {
+  var sel = h('select', { 'aria-label': label });
+  items.forEach(function (text, i) { sel.appendChild(h('option', { value: i, text: text })); });
+  sel.addEventListener('change', function () { queueSave(key, Number(sel.value)); });
+  bind(function () { sel.disabled = !S.settings; if (S.settings && !isBusy(key)) sel.value = String(getPath(S.settings, key)); });
+  return row(label, hint, h('div', { class: 'selwrap' }, sel));
+}
+var SWATCHES = [0xE4002B, 0xFF1F45, 0xEC5C28, 0xFFB020, 0xFFE066, 0x39FF8C, 0x55C3C2, 0x3AA0FF, 0xB46CFF, 0xF4F4F2, 0x84868D];
+function colorPick(key, label) {
+  var wrap = h('div', { class: 'colors' });
+  var code = h('div', { class: 'hex' });
+  var buttons = SWATCHES.map(function (c) {
+    var b = h('button', { 'aria-label': hex(c), style: 'background:' + hex(c) + ';color:' + hex(c) });
+    b.addEventListener('click', function () { queueSave(key, c); paint(); });
+    wrap.appendChild(b);
+    return b;
+  });
+  var custom = h('input', { type: 'color', 'aria-label': 'Custom colour' });
+  custom.addEventListener('input', function () { queueSave(key, parseInt(custom.value.slice(1), 16)); paint(); });
+  wrap.appendChild(h('label', { title: 'Custom' }, custom));
+  function paint() {
+    var v = S.settings ? Number(getPath(S.settings, key)) : -1;
+    buttons.forEach(function (b, i) { b.className = SWATCHES[i] === v ? 'on' : ''; });
+    code.textContent = v >= 0 ? hex(v).toUpperCase() : '--';
+    if (v >= 0 && !isBusy(key)) custom.value = hex(v);
+  }
+  bind(paint);
+  return h('div', { class: 'row stack' }, [h('div', { class: 'lab' }, [h('b', { text: label })]), code, wrap]);
+}
+function card(title, kids, sub) {
+  return h('div', { class: 'card' }, [title ? h('h3', { text: title }) : null, sub ? h('div', { class: 'sub', text: sub }) : null].concat(kids));
+}
+function section(title, body) { return h('div', { class: 'sec' }, [h('div', { class: 'sec-h', text: title }), body]); }
+function hero(idx, title, sub) {
+  return h('div', { class: 'hero' }, [h('span', { class: 'idx', text: idx }), h('div', null, [h('h1', { text: title }), h('p', { text: sub })])]);
+}
+
+// Things that depend on several settings (tach preview, warning bars, chips).
+var derived = [];
+function refreshDerived() { derived.forEach(function (fn) { try { fn(); } catch (e) {} }); }
+
+// ======================================================================
+// Icons
+// ======================================================================
+var I = {
+  display: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><circle cx="12" cy="10.5" r="2.5"/></svg>',
+  engine: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4.5-5"/><path d="M6.5 11.5l1 1M12 7v1.5M17.5 11.5l-1 1"/></svg>',
+  warnings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.2"/></svg>',
+  air: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l2-5h14l2 5v3H3z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/><path d="M12 2v5M9.5 4.5L12 2l2.5 2.5"/></svg>',
+  climate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="1.8"/><path d="M12 10.2C11 6 13 3 15.5 4.5S14.8 10 13.6 11M13.8 12.6c4.1 1.3 5.6 4.5 3.1 5.8s-4.6-3.6-4.6-5.4M10.4 12.9c-3 3.1-6.5 2.9-6.4.1s4.6-3.6 6.2-3.3"/></svg>',
+  system: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>',
+  up: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 30l14-14 14 14"/><path d="M10 40l14-14 14 14" opacity=".35"/></svg>',
+  down: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 18l14 14 14-14"/><path d="M10 8l14 14 14-14" opacity=".35"/></svg>',
+  fan: '<svg viewBox="0 0 48 48" fill="currentColor"><circle cx="24" cy="24" r="4"/><path d="M24 20c-2-8 1-15 7-15 5 0 6 6 0 10-2 1-4 3-7 5zM28 24c8-2 15 1 15 7 0 5-6 6-10 0-1-2-3-4-5-7zM24 28c2 8-1 15-7 15-5 0-6-6 0-10 2-1 4-3 7-5zM20 24c-8 2-15-1-15-7 0-5 6-6 10 0 1 2 3 4 5 7z"/></svg>'
+};
+var MODE_ICONS = (function () {
+  var person = '<circle cx="31" cy="11" r="4"/><path d="M29 17l-4 13h11l3 12"/>';
+  var face = '<path d="M3 16h17M16 12l4 4-4 4"/>';
+  var feet = '<path d="M3 38h20M19 34l4 4-4 4"/>';
+  var def = '<path d="M5 4q4 4 0 8M11 4q4 4 0 8M17 4q4 4 0 8"/>';
+  function svg(inner) { return '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>'; }
+  return [svg(person + face), svg(person + face + feet), svg(person + feet),
+          svg(person + feet + def), svg('<path d="M6 30Q24 14 42 30"/><path d="M14 40q4-5 0-10M24 40q4-5 0-10M34 40q4-5 0-10"/>')];
+}());
+
+// ---- Dashboard theme (appearance.theme: 0 Classic, 1 Graphite) ----
+// The server value is authoritative. localStorage only remembers the last
+// theme so the page doesn't flash Classic before settings arrive.
+var THEMES = [
+  ['Classic', 'EK SiR · needle gauges', { bg: '#070708', face: '#141417', acc: '#e4002b', ink: '#f4f4f2', track: '#26262b', warn: '#e4002b', needle: true }],
+  ['Graphite', 'Modern · ice blue arcs', { bg: '#090a0c', face: '#15181c', acc: '#5ec8f2', ink: '#eef0f2', track: '#262a30', warn: '#ff564a', font: '300' }]
+];
+// Classic preview: analog tach with ticks, numerals, red redline and a needle.
+function needleSwatch(c) {
+  var cx = 100, cy = 92, out = '<svg viewBox="10 2 180 180" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' +
+    '<circle cx="100" cy="92" r="86" fill="#2a2a2e"/><circle cx="100" cy="92" r="83" fill="' + c.face + '"/>' +
+    '<path d="' + arc(cx, cy, 72, 93.3, 120) + '" fill="none" stroke="' + c.warn + '" stroke-width="7"/>';
+  for (var i = 0; i <= 18; i++) {
+    var a = -120 + i * 240 / 18, major = i % 2 === 0;
+    var p1 = polar(cx, cy, major ? 64 : 69, a), p2 = polar(cx, cy, 76, a);
+    out += '<line x1="' + p1[0].toFixed(1) + '" y1="' + p1[1].toFixed(1) + '" x2="' + p2[0].toFixed(1) + '" y2="' + p2[1].toFixed(1) +
+      '" stroke="' + (i >= 16 ? c.warn : c.ink) + '" stroke-width="' + (major ? 2.4 : 1.2) + '"/>';
+    if (major) {
+      var n = polar(cx, cy, 52, a);
+      out += '<text x="' + n[0].toFixed(1) + '" y="' + (n[1] + 4).toFixed(1) + '" text-anchor="middle" fill="' + (i >= 16 ? c.warn : c.ink) +
+        '" style="font:italic 700 11px \'Roboto Condensed\',Arial,sans-serif">' + (i / 2) + '</text>';
+    }
+  }
+  var na = -120 + 6.5 * 240 / 9, tip = polar(cx, cy, 70, na), tail = polar(cx, cy, -14, na);
+  out += '<text x="100" y="78" text-anchor="middle" fill="#8b8b93" style="font:700 6px Arial,sans-serif;letter-spacing:1px">x1000 r/min</text>' +
+    '<line x1="' + tail[0].toFixed(1) + '" y1="' + tail[1].toFixed(1) + '" x2="' + tip[0].toFixed(1) + '" y2="' + tip[1].toFixed(1) +
+    '" stroke="' + c.acc + '" stroke-width="3.2" stroke-linecap="round"/>' +
+    '<circle cx="100" cy="92" r="8" fill="#1c1c20" stroke="#3a3a40" stroke-width="1.5"/><circle cx="100" cy="92" r="2.5" fill="' + c.acc + '"/></svg>';
+  return out;
+}
+function themeSwatch(c) {
+  if (c.needle) return needleSwatch(c);
+  var arcD = function (a0, a1) { return arc(100, 92, 62, a0, a1); };
+  return '<svg viewBox="10 2 180 180" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' +
+    '<circle cx="100" cy="92" r="86" fill="#22262c"/><circle cx="100" cy="92" r="83" fill="' + c.face + '"/>' +
+    '<path d="' + arcD(-120, 120) + '" fill="none" stroke="' + c.track + '" stroke-width="10" stroke-linecap="round"/>' +
+    '<path d="' + arcD(-120, 38) + '" fill="none" stroke="' + c.acc + '" stroke-width="10" stroke-linecap="round"/>' +
+    '<path d="' + arcD(84, 120) + '" fill="none" stroke="' + c.warn + '" stroke-opacity=".55" stroke-width="10" stroke-linecap="round"/>' +
+    '<text x="100" y="98" text-anchor="middle" fill="' + c.ink + '" style="font:' + c.font + ' 30px Bahnschrift,\'Roboto Condensed\',Roboto,Arial,sans-serif">6500</text>' +
+    '<text x="100" y="116" text-anchor="middle" fill="' + c.acc + '" style="font:700 9px Roboto,Arial,sans-serif;letter-spacing:2px">RPM</text></svg>';
+}
+function themePick(key) {
+  var cards = THEMES.map(function (t, i) {
+    var b = h('button', { class: 'tcard', style: 'background:' + t[2].bg, 'aria-label': t[0] + ' theme', html: themeSwatch(t[2]) },
+      [h('span', { class: 'tick', text: '✓' }), h('b', { text: t[0] }), h('small', { text: t[1] })]);
+    b.addEventListener('click', function () { if (!S.settings) return; queueSave(key, i); paint(); });
+    return b;
+  });
+  function paint() {
+    var v = S.settings ? Number(getPath(S.settings, key)) : -1;
+    cards.forEach(function (b, i) { b.className = 'tcard' + (i === v ? ' on' : ''); });
+  }
+  bind(paint);
+  return h('div', { class: 'row stack' }, [h('div', { class: 'lab' }, [h('b', { text: 'Dashboard theme' }),
+    h('small', { text: 'Applies to every MackoDash display and this control surface' })]), h('div', { class: 'themes' }, cards)]);
+}
+function applyTheme(t) {
+  var graphite = t === 1;
+  document.documentElement.className = graphite ? 'graphite' : '';
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', graphite ? '#090a0c' : '#070708');
+}
+
+function buildDisplay(p) {
+  p.appendChild(section('Theme', card(null, [themePick('appearance.theme')])));
+  var screens = ['Center', 'Left', 'Right'];
+  p.appendChild(section('Display levels', h('div', { class: 'grid c3 bright' }, screens.map(function (name, i) {
+    var key = 'appearance.brightness.' + i;
+    var big = h('div', { class: 'big' });
+    bind(function () { var v = S.settings ? getPath(S.settings, key) : null; big.replaceChildren(document.createTextNode(v == null ? '--' : v), h('small', { text: '%' })); });
+    return card(name + ' screen', [big, slider(key, 'Brightness', { min: 20, max: 100, suffix: '%' })]);
+  }))));
+  p.appendChild(h('div', { class: 'grid', style: 'margin-top:12px' }, card('All screens', [
+    slider('appearance.brightness.0', 'Set all three together', { min: 20, max: 100, suffix: '%',
+      keys: ['appearance.brightness.0', 'appearance.brightness.1', 'appearance.brightness.2'] })])));
+  var colors = [['Tach sweep', 'appearance.tachRgb'], ['Caution', 'appearance.cautionRgb'],
+                ['Critical', 'appearance.criticalRgb'], ['Offline', 'appearance.offlineRgb']];
+  p.appendChild(section('Signal colours', h('div', { class: 'grid c2' }, colors.map(function (c) {
+    return card(c[0], [colorPick(c[1], 'Colour')]);
+  }))));
+  p.appendChild(section('Units', card(null, [
+    boolSeg('units.speedKph', 'Speed', 'MPH', 'KM/H'),
+    boolSeg('units.temperatureCelsius', 'Temperature', '°F', '°C'),
+    boolSeg('units.pressureKpa', 'Pressure', 'PSI', 'kPa'),
+    boolSeg('units.distanceKm', 'Distance', 'MI', 'KM')
+  ])));
+}
+
+function buildEngine(p) {
+  // Live tach strip: VTEC, shift stages and redline drawn from current settings.
+  var MAXR = 9000;
+  var tach = h('div', { class: 'tach' });
+  var scale = h('div', { class: 'scale' }), vz = h('i', { class: 'vtec-zone' }), rz = h('i', { class: 'red-zone' });
+  scale.appendChild(vz); scale.appendChild(rz);
+  tach.appendChild(scale);
+  for (var k = 0; k <= 9; k++) tach.appendChild(h('i', { class: 'tick', style: 'left:' + (k / 9 * 100) + '%' }, h('span', { text: k })));
+  var vt = h('div', { class: 'vt', text: 'VTEC' }), rl = h('div', { class: 'rl', text: 'REDLINE' });
+  var dots = [0, 1, 2].map(function () { return h('i', { class: 'st' }); });
+  tach.appendChild(vt); tach.appendChild(rl); dots.forEach(function (d) { tach.appendChild(d); });
+  derived.push(function () {
+    if (!S.settings) return;
+    var e = S.settings.engine, pct = function (r) { return clamp(r / MAXR * 100, 0, 100) + '%'; };
+    vt.style.left = pct(e.vtecRpm);
+    vz.style.left = pct(e.vtecRpm); vz.style.right = (100 - clamp(e.redlineRpm / MAXR * 100, 0, 100)) + '%';
+    rz.style.left = pct(e.redlineRpm);
+    rl.style.left = pct(e.redlineRpm);
+    dots.forEach(function (d, i) {
+      d.style.left = pct(e.shiftStageRpm[i]);
+      d.style.background = hex(e.shiftStageRgb[i]); d.style.color = hex(e.shiftStageRgb[i]);
+      d.style.display = e.shiftLightEnabled ? 'block' : 'none';
+    });
+  });
+  p.appendChild(card('Tach map', [tach], 'x1000 rpm · VTEC engagement, shift stages and redline'));
+
+  p.appendChild(section('Real-time test', card(null, [toggle('simulation.enabled', 'Simulation mode', 'Sweeps the tach 850–9000 rpm. Not saved — resets on reboot.')])));
+  p.appendChild(section('RPM strategy', h('div', { class: 'grid c2' }, [
+    card('Engine', [
+      stepper('engine.vtecRpm', 'VTEC point', { min: 3000, max: 7500, step: 100 }, 'rpm · at least 600 below redline'),
+      stepper('engine.redlineRpm', 'Redline', { min: 6000, max: 9000, step: 100 }, 'rpm'),
+      segmented('engine.smoothing', 'Smoothing', ['Off', 'Light', 'Med', 'Strong'], null, true)
+    ]),
+    card('Shift light', [
+      toggle('engine.shiftLightEnabled', 'Shift light'),
+      slider('engine.shiftLightBrightness', 'Brightness', { min: 20, max: 100, suffix: '%' }),
+      toggle('engine.redlineFlash', 'Redline flash', 'Flashes the tach at redline')
+    ])
+  ])));
+  p.appendChild(section('Shift stages', h('div', { class: 'grid c3' }, [0, 1, 2].map(function (i) {
+    return card('Stage ' + (i + 1), [
+      stepper('engine.shiftStageRpm.' + i, 'Trigger', { min: 3000, max: 9000, step: 100 }, 'rpm'),
+      colorPick('engine.shiftStageRgb.' + i, 'Colour')
+    ]);
+  }))));
+  var inputs = ['0', '1', '2', '3', '4', '5', '6', '7'];
+  p.appendChild(section('Fuel input', card(null, [
+    segmented('fuel.analogInput', 'Analog input', inputs, 'Sender channel', true),
+    stepper('fuel.emptyMv', 'Empty signal', { min: 0, max: 5000, step: 10 }, 'mV at empty tank'),
+    stepper('fuel.fullMv', 'Full signal', { min: 0, max: 5000, step: 10 }, 'mV at full tank')
+  ])));
+}
+
+// [name, unit, scale, min, max, step, lowerIsWorse] — bounds from settings_schema.c (raw / scale).
+var WARN = [
+  ['Coolant', '°F', 10, 160, 260, 1, false],
+  ['Intake air', '°F', 10, 60, 200, 1, false],
+  ['AFR rich', '', 10, 8, 14, 0.1, true],
+  ['AFR lean', '', 10, 10, 20, 0.1, false],
+  ['Boost / MAP', ' psi', 10, 0, 40, 0.5, false],
+  ['Battery', ' V', 10, 8, 15, 0.1, true],
+  ['Throttle', '%', 10, 50, 100, 1, false],
+  ['Oil pressure', ' psi', 10, 0, 50, 1, true],
+  ['Injector duty', '%', 10, 40, 100, 1, false],
+  ['Knock', ' cnt', 1, 0, 100, 1, false]
+];
+function buildWarnings(p) {
+  p.appendChild(h('div', { class: 'grid c2' }, WARN.map(function (w, pair) {
+    var ck = 'warningThresholds.' + (pair * 2), xk = 'warningThresholds.' + (pair * 2 + 1);
+    var dec = w[5] < 1 ? 1 : 0;
+    var bar = h('div', { class: 'wbar' }), cz = h('i', { class: 'c' }), xz = h('i', { class: 'x' });
+    bar.appendChild(cz); bar.appendChild(xz);
+    derived.push(function () {
+      if (!S.settings) return;
+      var span = w[4] - w[3];
+      var c = (getPath(S.settings, ck) / w[2] - w[3]) / span * 100, x = (getPath(S.settings, xk) / w[2] - w[3]) / span * 100;
+      c = clamp(c, 0, 100); x = clamp(x, 0, 100);
+      if (w[6]) { xz.style.left = '0'; xz.style.width = x + '%'; cz.style.left = x + '%'; cz.style.width = Math.max(0, c - x) + '%'; }
+      else { cz.style.left = c + '%'; cz.style.width = Math.max(0, x - c) + '%'; xz.style.left = x + '%'; xz.style.width = (100 - x) + '%'; }
+    });
+    var title = h('h3', null, [w[0], h('span', { class: 'wdir', text: w[6] ? 'LOW = BAD' : 'HIGH = BAD' })]);
+    return h('div', { class: 'card' }, [title, bar,
+      h('div', { class: 'wscale' }, [h('span', { text: w[3] + w[1] }), h('span', { text: w[4] + w[1] })]),
+      stepper(ck, 'Caution', { min: w[3], max: w[4], step: w[5], scale: w[2], dec: dec, suffix: w[1], tone: 'caution' }),
+      stepper(xk, 'Critical', { min: w[3], max: w[4], step: w[5], scale: w[2], dec: dec, suffix: w[1], tone: 'critical' })
+    ]);
+  })));
+}
+
+// ======================================================================
+// SVG helpers
+// ======================================================================
+var SVGNS = 'http://www.w3.org/2000/svg';
+function s(tag, attrs, kids) {
+  var el = document.createElementNS(SVGNS, tag);
+  if (attrs) Object.keys(attrs).forEach(function (k) {
+    if (k === 'text') el.textContent = attrs[k];
+    else if (k === 'class') el.setAttribute('class', attrs[k]);
+    else if (k.slice(0, 2) === 'on') el.addEventListener(k.slice(2), attrs[k]);
+    else el.setAttribute(k, attrs[k]);
+  });
+  (kids || []).forEach(function (c) { if (c) el.appendChild(c); });
+  return el;
+}
+function setCls(el, base, on) { el.setAttribute('class', base + (on ? ' on' : '')); }
+// angle in degrees, clockwise from 12 o'clock
+function polar(cx, cy, r, a) { var t = a * Math.PI / 180; return [cx + r * Math.sin(t), cy - r * Math.cos(t)]; }
+function sector(cx, cy, r0, r1, a0, a1) {
+  var p1 = polar(cx, cy, r1, a0), p2 = polar(cx, cy, r1, a1), p3 = polar(cx, cy, r0, a1), p4 = polar(cx, cy, r0, a0);
+  var big = a1 - a0 > 180 ? 1 : 0;
+  return 'M' + p1.join(',') + 'A' + r1 + ',' + r1 + ' 0 ' + big + ' 1 ' + p2.join(',') +
+         'L' + p3.join(',') + 'A' + r0 + ',' + r0 + ' 0 ' + big + ' 0 ' + p4.join(',') + 'Z';
+}
+function arc(cx, cy, r, a0, a1) {
+  var p1 = polar(cx, cy, r, a0), p2 = polar(cx, cy, r, a1);
+  return 'M' + p1.join(',') + 'A' + r + ',' + r + ' 0 ' + (a1 - a0 > 180 ? 1 : 0) + ' 1 ' + p2.join(',');
+}
+
+// ======================================================================
+// Air Ride — safety-critical: momentary hold with mandatory release
+// ======================================================================
+var CORNERS = [['front_left', 'FL', 'FRONT LEFT', 'frontLeftPsi', 300, 360],
+               ['front_right', 'FR', 'FRONT RIGHT', 'frontRightPsi', 0, 60],
+               ['rear_right', 'RR', 'REAR RIGHT', 'rearRightPsi', 120, 180],
+               ['rear_left', 'RL', 'REAR LEFT', 'rearLeftPsi', 180, 240]];
+var airTarget = 'all', hold = null, airEls = { sel: [] }, airFails = 0, airTimer = null, airPolling = false;
+
+function airArmed() { return !!(S.air && S.air.rightOnline && S.air.airConnected); }
+function airSend(command, ms) { return request('POST', '/api/air/command', { command: command }, ms || 900); }
+
+function holdStart(dir, btn) {
+  if (hold || !airArmed()) return;
+  hold = { command: airTarget + '_' + dir, btn: btn, busy: false, timer: null };
+  btn.className = 'act';
+  holdTick();
+  hold.timer = setInterval(holdTick, 200);
+}
+function holdTick() {
+  var hd = hold;
+  if (!hd || hd.busy) return;
+  hd.busy = true;
+  airSend(hd.command, 800).then(function (r) {
+    hd.busy = false;
+    if (hold !== hd || r.ok) return;
+    holdStop();
+    toast(r.status === 503 ? 'Air Ride not armed — released'
+        : r.status === 400 ? 'Command not supported by this firmware'
+        : 'Air link lost — released', true);
+  });
+}
+// Every exit path ends here. Release is sent twice for robustness; the right
+// display also auto-releases if refreshes stop for 500 ms.
+function holdStop() {
+  if (!hold) return;
+  clearInterval(hold.timer);
+  hold.btn.className = '';
+  hold = null;
+  airSend('release', 1200);
+  setTimeout(function () { if (!hold) airSend('release', 1200); }, 160);
+}
+function selectAir(t) {
+  holdStop();
+  airTarget = t;
+  airEls.sel.forEach(function (fn) { fn(t); });
+}
+function covers(t, corner) {
+  return t === 'all' || t === corner || (t === 'front' && corner.indexOf('front') === 0) || (t === 'rear' && corner.indexOf('rear') === 0);
+}
+
+function buildAirScreen() {
+  var svg = s('svg', { viewBox: '0 0 400 260', preserveAspectRatio: 'xMidYMid meet' });
+  var car = s('g', { transform: 'translate(147.5,14.5) scale(.62)' });
+  car.innerHTML =
+    '<rect x="2" y="52" width="26" height="62" rx="7" fill="#1a1a1e" stroke="#3a3a40"/><rect x="142" y="52" width="26" height="62" rx="7" fill="#1a1a1e" stroke="#3a3a40"/>' +
+    '<rect x="2" y="262" width="26" height="62" rx="7" fill="#1a1a1e" stroke="#3a3a40"/><rect x="142" y="262" width="26" height="62" rx="7" fill="#1a1a1e" stroke="#3a3a40"/>' +
+    '<path d="M48 8Q85 0 122 8Q150 16 152 60L154 300Q154 352 122 364Q85 372 48 364Q16 352 16 300L18 60Q20 16 48 8Z" fill="#141417" stroke="#4a4a52" stroke-width="2.5"/>' +
+    '<path d="M36 112Q85 92 134 112L128 152Q85 140 42 152Z" fill="#0b0b0d" stroke="#3a3a40"/>' +
+    '<path d="M42 268Q85 278 128 268L134 300Q85 316 36 300Z" fill="#0b0b0d" stroke="#3a3a40"/>' +
+    '<path class="carhl" d="M60 14Q85 9 110 14M58 360Q85 366 112 360" fill="none" stroke-width="4" stroke-linecap="round"/>';
+  svg.appendChild(car);
+  var fAx = s('line', { class: 'axle', x1: 150, y1: 66, x2: 250, y2: 66 });
+  var rAx = s('line', { class: 'axle', x1: 150, y1: 196, x2: 250, y2: 196 });
+  svg.appendChild(fAx); svg.appendChild(rAx);
+  airEls.vals = {};
+  var pos = { front_left: [12, 12], front_right: [270, 12], rear_left: [12, 162], rear_right: [270, 162] };
+  var hits = {};
+  CORNERS.forEach(function (c) {
+    var x = pos[c[0]][0], y = pos[c[0]][1];
+    var val = s('text', { class: 'val', x: x + 59, y: y + 62, 'text-anchor': 'middle', text: '--' });
+    var fg = s('rect', { class: 'bar-fg', x: x + 14, y: y + 72, width: 0, height: 5, rx: 2.5 });
+    var g = s('g', { class: 'hit', onclick: function () { selectAir(c[0]); } }, [
+      s('rect', { class: 'box', x: x, y: y, width: 118, height: 86, rx: 12 }),
+      s('text', { class: 'lbl', x: x + 59, y: y + 20, 'text-anchor': 'middle', text: c[2] }),
+      val, s('rect', { class: 'bar-bg', x: x + 14, y: y + 72, width: 90, height: 5, rx: 2.5 }), fg]);
+    svg.appendChild(g);
+    hits[c[0]] = g;
+    airEls.vals[c[3]] = { val: val, fg: fg };
+  });
+  var tankVal = s('text', { class: 'tankv', x: 200, y: 140, 'text-anchor': 'middle', text: '--' });
+  svg.appendChild(s('g', null, [s('rect', { x: 152, y: 98, width: 96, height: 66, rx: 33, class: 'tankbox' }),
+    tankVal, s('text', { class: 'lbl', x: 200, y: 156, 'text-anchor': 'middle', text: 'TANK' })]));
+  airEls.vals.tankPsi = { val: tankVal, fg: null };
+  airEls.sel.push(function (t) {
+    Object.keys(hits).forEach(function (k) { hits[k].setAttribute('class', 'hit' + (covers(t, k) && t !== 'all' ? ' sel' : '')); });
+    setCls(fAx, 'axle', t === 'front'); setCls(rAx, 'axle', t === 'rear');
+  });
+  airEls.status = h('b', { text: 'OFFLINE' });
+  return h('div', { class: 'scr' }, [h('div', { class: 'scr-bar' }, [document.createTextNode('LIVE PRESSURE · PSI'), airEls.status]), svg]);
+}
+function buildWheel() {
+  var svg = s('svg', { class: 'wheel', viewBox: '0 0 220 220', preserveAspectRatio: 'xMidYMid meet' });
+  svg.innerHTML = '<defs>' +
+    '<linearGradient id="qg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2a30"/><stop offset="1" stop-color="#151519"/></linearGradient>' +
+    '<linearGradient id="qr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="s-hi"/><stop offset="1" class="s-lo"/></linearGradient>' +
+    '<radialGradient id="hub" cx=".5" cy=".35" r=".7"><stop offset="0" stop-color="#34343c"/><stop offset="1" stop-color="#121215"/></radialGradient></defs>';
+  svg.appendChild(s('circle', { class: 'ring', cx: 110, cy: 110, r: 107 }));
+  var parts = [];
+  CORNERS.forEach(function (c) {
+    var q = s('path', { class: 'q', d: sector(110, 110, 50, 103, c[4] + 2.5, c[5] - 2.5), onclick: function () { selectAir(c[0]); } });
+    var mid = polar(110, 110, 77, (c[4] + c[5]) / 2);
+    var l = s('text', { class: 'ql', x: mid[0], y: mid[1] + 6, 'text-anchor': 'middle', text: c[1] });
+    svg.appendChild(q); svg.appendChild(l);
+    parts.push([c[0], q, l]);
+  });
+  var hub = s('circle', { class: 'hub', cx: 110, cy: 110, r: 45, onclick: function () { selectAir('all'); } });
+  var hl = s('text', { class: 'hl', x: 110, y: 117, 'text-anchor': 'middle', text: 'ALL' });
+  svg.appendChild(hub); svg.appendChild(hl);
+  airEls.sel.push(function (t) {
+    parts.forEach(function (p) { var on = covers(t, p[0]) && t !== 'all'; setCls(p[1], 'q', on); setCls(p[2], 'ql', on); });
+    setCls(hub, 'hub', t === 'all'); setCls(hl, 'hl', t === 'all');
+  });
+  return svg;
+}
+function axleButton(t, label) {
+  var b = h('button', { class: 'axbtn', text: label });
+  b.addEventListener('click', function () { selectAir(t); });
+  airEls.sel.push(function (cur) { b.className = 'axbtn' + (cur === t ? ' on' : ''); });
+  return b;
+}
+function buildAir(p) {
+  var raise = h('button', { 'aria-label': 'Raise (hold)', html: I.up + '<b>RAISE</b><small>HOLD</small>' });
+  var lower = h('button', { 'aria-label': 'Lower (hold)', html: I.down + '<b>LOWER</b><small>HOLD</small>' });
+  onPress(raise, function () { holdStart('up', raise); }, holdStop);
+  onPress(lower, function () { holdStart('down', lower); }, holdStop);
+  var comp = h('button', { class: 'comp' }, [h('i'), h('b', { text: 'COMPRESSOR' }), h('span', { text: 'UNAVAILABLE' })]);
+  comp.addEventListener('click', function () {
+    var on = !!(S.air && S.air.compressorOn);
+    airSend(on ? 'compressor_off' : 'compressor_on').then(function (r) {
+      if (!r.ok) toast(r.status === 503 ? 'Air Ride not armed' : 'Compressor command failed', true);
+    });
+  });
+  airEls.raise = raise; airEls.lower = lower; airEls.comp = comp;
+  p.appendChild(h('div', { class: 'air' }, [
+    buildAirScreen(),
+    h('div', { class: 'remote' }, [
+      h('div', { class: 'rm-main' }, [
+        h('div', { class: 'selcol' }, [axleButton('front', 'FRONT'), buildWheel(), axleButton('rear', 'REAR')]),
+        h('div', { class: 'rocker' }, [raise, lower])
+      ]),
+      h('div', { class: 'rm-foot' }, [comp])
+    ])
+  ]));
+  selectAir('all');
+  renderAir();
+}
+function renderAir() {
+  if (!airEls.status) return;
+  var a = S.air, armed = airArmed(), valid = armed && a.pressureValid;
+  Object.keys(airEls.vals).forEach(function (k) {
+    var e = airEls.vals[k];
+    e.val.textContent = valid ? a[k] : '--';
+    if (e.fg) e.fg.setAttribute('width', valid ? (clamp(a[k] / 150, 0, 1) * 90).toFixed(1) : 0);
+  });
+  airEls.status.textContent = armed ? 'SYSTEM ARMED' : !a ? 'NO CONNECTION' : !a.rightOnline ? 'RIGHT DISPLAY OFFLINE · LOCKED' : 'AIR LINK OFFLINE · LOCKED';
+  airEls.status.className = armed ? 'live' : '';
+  airEls.raise.disabled = airEls.lower.disabled = !armed;
+  var compOk = armed && a.compressorValid;
+  airEls.comp.disabled = !compOk;
+  airEls.comp.className = 'comp' + (compOk ? (a.compressorOn ? ' on' : ' ready') : '');
+  airEls.comp.lastChild.textContent = !armed ? 'UNAVAILABLE' : !a.compressorValid ? 'NO STATUS' : a.compressorOn ? 'RUNNING' : 'READY';
+  if (!armed) holdStop();
+}
+// 2 Hz on the Air Ride tab, slow heartbeat elsewhere; one request at a time.
+function airLoop() {
+  clearTimeout(airTimer);
+  if (airPolling) return;
+  if (document.hidden) { airTimer = setTimeout(airLoop, 1000); return; }
+  airPolling = true;
+  request('GET', '/api/air/state', null, 1500).then(function (r) {
+    airPolling = false;
+    if (r.ok && r.json) { S.air = r.json; airFails = 0; }
+    else if (++airFails >= 2) S.air = null;
+    renderAir();
+    airTimer = setTimeout(airLoop, S.page === 'air' ? 500 : 2500);
+  });
+}
+
+// ======================================================================
+// Climate — UI is complete; firmware endpoints are pending.
+// ======================================================================
+/* ---- Climate API adapter: the only code that knows the wire format. ----
+   Firmware integration (proposed in the handoff):
+     GET  /api/climate/state   -> {"online":true,"fan":0-4,"blend":0-100,"mode":0-4}
+     POST /api/climate/command    {"command":"fan"|"blend"|"mode","value":n}
+   Mode index: 0 FACE, 1 BI-LEVEL, 2 FEET, 3 FEET/DEF, 4 DEFROST (Knob contract).
+   Until the endpoints exist the server answers with its captive-portal
+   redirect; redirect:'manual' keeps that from downloading the whole page. */
+var climateApi = {
+  getState: function () {
+    return request('GET', '/api/climate/state', null, 1500, { manualRedirect: true }).then(function (r) {
+      if (r.unavailable) return { status: 'preview' };
+      if (r.status === 503) return { status: 'offline' };
+      if (!r.ok || !r.json) return { status: r.status === 0 ? 'unreachable' : 'offline' };
+      var j = r.json;
+      return { status: j.online === false ? 'offline' : 'live',
+               fan: clamp(Number(j.fan) || 0, 0, 4), blend: clamp(Number(j.blend) || 0, 0, 100), mode: clamp(Number(j.mode) || 0, 0, 4) };
+    });
+  },
+  send: function (command, value) {
+    return request('POST', '/api/climate/command', { command: command, value: value }, 1500, { manualRedirect: true }).then(function (r) {
+      if (r.unavailable) return 'preview';
+      if (r.ok) return 'applied';
+      if (r.status === 503) return 'offline';
+      if (r.status === 400) return 'rejected';
+      return 'failed';
+    });
+  }
+};
+var MODES = ['FACE', 'BI-LEVEL', 'FEET', 'FEET/DEF', 'DEFROST'];
+var C = { status: 'checking', fan: 0, blend: 50, mode: 1, timer: null, sendTimer: null, els: {} };
+
+function climateSend(command, value) {
+  if (command === 'blend') {
+    clearTimeout(C.sendTimer);
+    C.sendTimer = setTimeout(function () { climateSendNow(command, value); }, 220);
+  } else climateSendNow(command, value);
+}
+function climateSendNow(command, value) {
+  climateApi.send(command, value).then(function (result) {
+    if (result === 'applied') return;
+    if (result === 'preview') { if (C.status !== 'preview') { C.status = 'preview'; renderClimate(); } return; }
+    if (result === 'offline') C.status = 'offline';
+    renderClimate();
+    toast(result === 'offline' ? 'HVAC offline — not applied' : result === 'rejected' ? 'Climate command rejected' : 'Climate command failed', true);
+  });
+}
+function climatePoll() {
+  clearTimeout(C.timer);
+  if (S.page !== 'climate') return;
+  climateApi.getState().then(function (st) {
+    if (st.status === 'live') { C.fan = st.fan; C.blend = st.blend; C.mode = st.mode; }
+    if (st.status !== 'unreachable') C.status = st.status;
+    renderClimate();
+    if (S.page === 'climate') C.timer = setTimeout(climatePoll, C.status === 'preview' ? 15000 : 1000);
+  });
+}
+function setBlend(v) { C.blend = clamp(Math.round(v), 0, 100); renderClimate(); climateSend('blend', C.blend); }
+function buildClimate(p) {
+  var E = C.els;
+  // fan bank
+  E.fanIco = h('div', { class: 'fanico', html: I.fan });
+  E.fans = ['OFF', '1', '2', '3', '4'].map(function (t, i) {
+    var b = h('button', null, [h('b', { text: t }), i ? h('small', { text: 'SPEED' }) : null]);
+    b.addEventListener('click', function () { C.fan = i; renderClimate(); climateSend('fan', i); });
+    return b;
+  });
+  var fan = h('div', { class: 'panel c-fan' }, [h('div', { class: 'ptitle', text: 'Fan' }), E.fanIco, h('div', { class: 'bank' }, E.fans)]);
+  // temperature dial (270 degree sweep, drag or tap)
+  var dial = s('svg', { class: 'dial', viewBox: '0 0 240 230', preserveAspectRatio: 'xMidYMid meet' });
+  dial.innerHTML = '<defs><linearGradient id="tg" x1="0" x2="1"><stop offset="0" class="s-cold"/><stop offset=".5" class="s-mid"/><stop offset="1" class="s-hot"/></linearGradient></defs>';
+  for (var k = 0; k <= 10; k++) {
+    var a = -135 + k * 27, p1 = polar(120, 118, 108, a), p2 = polar(120, 118, 115, a);
+    dial.appendChild(s('line', { class: 'tick', x1: p1[0], y1: p1[1], x2: p2[0], y2: p2[1] }));
+  }
+  dial.appendChild(s('path', { class: 'track', d: arc(120, 118, 92, -135, 135) }));
+  dial.appendChild(s('path', { class: 'grad', d: arc(120, 118, 92, -135, 135) }));
+  E.knob = s('circle', { class: 'knob', r: 14, cx: 120, cy: 26 });
+  E.big = s('text', { class: 'big', x: 120, y: 132, 'text-anchor': 'middle' });
+  E.word = s('text', { class: 'word', x: 120, y: 160, 'text-anchor': 'middle' });
+  dial.appendChild(E.knob); dial.appendChild(E.big); dial.appendChild(E.word);
+  function fromPointer(e) {
+    var pt = e.touches ? e.touches[0] : e, r = dial.getBoundingClientRect();
+    var sc = Math.min(r.width / 240, r.height / 230);
+    var x = (pt.clientX - r.left - (r.width - 240 * sc) / 2) / sc - 120;
+    var y = (pt.clientY - r.top - (r.height - 230 * sc) / 2) / sc - 118;
+    var ang = Math.atan2(x, -y) * 180 / Math.PI;
+    if (ang > 135 || ang < -135) ang = ang > 0 ? 135 : -135;
+    setBlend((ang + 135) / 270 * 100);
+  }
+  var dragging = false;
+  function down(e) { dragging = true; if (e.cancelable) e.preventDefault(); fromPointer(e); }
+  function move(e) { if (dragging) { if (e.cancelable) e.preventDefault(); fromPointer(e); } }
+  function up() { dragging = false; }
+  if (HAS_POINTER) {
+    dial.addEventListener('pointerdown', function (e) { try { dial.setPointerCapture(e.pointerId); } catch (err) {} down(e); });
+    dial.addEventListener('pointermove', move); dial.addEventListener('pointerup', up); dial.addEventListener('pointercancel', up);
+  } else {
+    dial.addEventListener('touchstart', down, { passive: false }); dial.addEventListener('touchmove', move, { passive: false });
+    dial.addEventListener('touchend', up); dial.addEventListener('mousedown', down);
+    window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+  }
+  var cold = h('button', { class: 'cold', text: '− COLD' }), hot = h('button', { class: 'hot', text: 'HOT +' });
+  repeatPress(cold, function () { setBlend(C.blend - 5); });
+  repeatPress(hot, function () { setBlend(C.blend + 5); });
+  E.stat = h('span', { class: 'cstat chk', text: 'CHECKING' });
+  E.note = h('div', { class: 'cnote' });
+  var temp = h('div', { class: 'panel c-temp' }, [h('div', { class: 'ptitle', text: 'Temperature' }), E.stat,
+    h('div', { class: 'dialbox' }, dial), h('div', { class: 'tbtns' }, [cold, hot]), E.note]);
+  // mode bank
+  E.modes = MODES.map(function (name, i) {
+    var b = h('button', { html: MODE_ICONS[i] }, h('small', { text: name }));
+    b.addEventListener('click', function () { C.mode = i; renderClimate(); climateSend('mode', i); });
+    return b;
+  });
+  var mode = h('div', { class: 'panel c-mode' }, [h('div', { class: 'ptitle', text: 'Vent mode' }), h('div', { class: 'bank modes' }, E.modes)]);
+  p.appendChild(h('div', { class: 'clim' }, [temp, fan, mode]));
+  renderClimate();
+}
+function renderClimate() {
+  var E = C.els;
+  if (!E.stat) return;
+  var st = { checking: ['CHECKING', 'chk', ''], preview: ['PREVIEW', '', 'PREVIEW · NOT APPLIED TO THE CAR'],
+             offline: ['HVAC OFFLINE', 'off', 'NOT APPLIED · HVAC OFFLINE'], live: ['LIVE', 'live', ''] }[C.status] || ['CHECKING', 'chk', ''];
+  E.stat.textContent = st[0]; E.stat.className = 'cstat ' + st[1]; E.note.textContent = st[2];
+  E.fans.forEach(function (b, i) { b.className = i === C.fan ? 'on' : ''; });
+  var svg = E.fanIco.firstChild;
+  svg.style.animationDuration = [1, 2.2, 1.3, 0.75, 0.42][C.fan] + 's';
+  svg.style.animationPlayState = C.fan ? 'running' : 'paused';
+  var kp = polar(120, 118, 92, -135 + C.blend * 2.7);
+  E.knob.setAttribute('cx', kp[0].toFixed(1)); E.knob.setAttribute('cy', kp[1].toFixed(1));
+  E.big.textContent = C.blend + '%';
+  E.big.setAttribute('class', 'big' + (C.blend < 35 ? ' cold' : C.blend > 65 ? ' hot' : ''));
+  E.word.textContent = C.blend < 35 ? 'COLD' : C.blend > 65 ? 'HOT' : 'MIXED';
+  E.modes.forEach(function (b, i) { b.className = i === C.mode ? 'on' : ''; });
+}
+
+// ======================================================================
+// Settings — every option on one scrolling page
+// ======================================================================
+function buildAirSetup(p) {
+  p.appendChild(h('div', { class: 'grid c2' }, [
+    card('Compressor', [
+      toggle('airRide.enabled', 'Air Ride enabled'),
+      stepper('airRide.compressorOnPsi', 'Turn on below', { min: 80, max: 195, step: 1 }, 'psi tank'),
+      stepper('airRide.compressorOffPsi', 'Turn off at', { min: 85, max: 200, step: 1 }, 'psi · at least 5 above on')
+    ]),
+    card('Presets', [0, 1, 2, 3, 4, 5].map(function (i) {
+      return stepper('airRide.presetPsi.' + i, 'P' + (i + 1), { min: 0, max: 200, step: 1, suffix: ' psi' });
+    }), 'Stored targets — not applied automatically yet')
+  ]));
+}
+function buildSystem(p) {
+  var channels = ['RPM', 'Speed', 'Boost', 'Coolant', 'Intake', 'AFR', 'Oil pressure', 'Fuel pressure', 'Battery', 'Throttle', 'Fuel level'];
+  p.appendChild(h('div', { class: 'grid c2' }, [
+    card('Vehicle source', [segmented('canProtocol', 'CAN protocol', ['Automatic', 'Hondata'], null, true)]),
+    card('Logging', [toggle('logging.autoRecord', 'Auto record', 'Start a microSD log automatically'),
+      segmented('logging.logName', 'Log profile', ['General', 'Dyno', 'Tune', 'Race', 'Test'], null, true)])
+  ]));
+  p.appendChild(section('Display roles', h('div', { class: 'grid c2' }, [
+    card('Left · CAN data', [
+      select('screenLayout.leftValueChannels.0', 'Main value', channels),
+      select('screenLayout.leftValueChannels.1', 'Lower left', channels),
+      select('screenLayout.leftValueChannels.2', 'Lower right', channels)]),
+    card('Right · Air Ride', [toggle('screenLayout.rightBatteryEnabled', 'Show CAN battery')])
+  ])));
+  var info = {};
+  ['Settings revision', 'Schema version', 'Requests OK', 'Requests failed'].forEach(function (k) { info[k] = h('b', { text: '--' }); });
+  derived.push(function () {
+    info['Settings revision'].textContent = S.settings ? S.settings.revision : '--';
+    info['Schema version'].textContent = S.settings ? S.settings.schemaVersion : '--';
+  });
+  setInterval(function () { info['Requests OK'].textContent = net.ok; info['Requests failed'].textContent = net.fail; }, 1000);
+  var reset = h('button', { class: 'btn ghost-red', text: 'Restore defaults' });
+  reset.addEventListener('click', function () {
+    confirmBox('Restore defaults?', 'Every MackoDash setting returns to factory values. This cannot be undone.', function () {
+      request('POST', '/api/reset', null, 4000).then(function (r) {
+        if (r.ok && r.json) { S.settings = r.json; syncAll(); toast('Defaults restored'); }
+        else toast('Reset failed', true);
+      });
+    });
+  });
+  p.appendChild(section('Maintenance', h('div', { class: 'grid c2' }, [
+    card('Status', Object.keys(info).map(function (k) { return h('div', { class: 'kv' }, [h('span', { text: k }), info[k]]); })),
+    card('Reset', [h('div', { class: 'sub', text: 'Restores all display, engine, warning and Air Ride settings.' }), reset])
+  ])));
+}
+var GROUPS = [['display', 'Display', buildDisplay], ['engine', 'Engine', buildEngine], ['warnings', 'Warnings', buildWarnings],
+              ['airset', 'Air Ride', buildAirSetup], ['system', 'System', buildSystem]];
+function buildSettings(p) {
+  var jump = h('div', { class: 'jump' });
+  var chips = {}, groups = {};
+  GROUPS.forEach(function (g) {
+    var chip = h('button', { text: g[1] });
+    chip.addEventListener('click', function () {
+      var top = groups[g[0]].getBoundingClientRect().top + window.pageYOffset - jump.offsetHeight - document.querySelector('.top').offsetHeight + 2;
+      window.scrollTo(0, Math.max(0, top));
+    });
+    jump.appendChild(chip); chips[g[0]] = chip;
+  });
+  p.appendChild(jump);
+  GROUPS.forEach(function (g) {
+    var box = h('div', { class: 'group' }, h('div', { class: 'gh' }, h('h2', { text: g[1] })));
+    g[2](box);
+    p.appendChild(box); groups[g[0]] = box;
+  });
+  function spy() {
+    if (S.page !== 'settings') return;
+    var cur = GROUPS[0][0];
+    GROUPS.forEach(function (g) { if (groups[g[0]].getBoundingClientRect().top < 170) cur = g[0]; });
+    Object.keys(chips).forEach(function (k) { chips[k].className = k === cur ? 'on' : ''; });
+  }
+  window.addEventListener('scroll', spy);
+  setTimeout(spy, 0);
+}
+
+// ======================================================================
+// Shell & navigation
+// ======================================================================
+var PAGES = [['air', 'Air Ride', buildAir, true], ['climate', 'Climate', buildClimate, true], ['settings', 'Settings', buildSettings, false]];
+var NAV_ICON = { air: I.air, climate: I.climate, settings: I.system };
+var pageEls = {}, navEls = {};
+function go(id) {
+  if (!pageEls[id]) id = 'air';
+  holdStop();
+  S.page = id;
+  PAGES.forEach(function (pg) {
+    pageEls[pg[0]].className = 'page' + (pg[3] ? ' fit' : '') + (pg[0] === id ? ' on' : '');
+    navEls[pg[0]].className = pg[0] === id ? 'on' : '';
+  });
+  document.body.className = id === 'settings' ? '' : 'locked';
+  store('mdPage', id);
+  window.scrollTo(0, 0);
+  if (id === 'air') airLoop();
+  if (id === 'climate') { if (C.status !== 'live') C.status = 'checking'; renderClimate(); climatePoll(); }
+  else clearTimeout(C.timer);
+}
+function fitViewport() { document.documentElement.style.setProperty('--vh', window.innerHeight + 'px'); }
+function init() {
+  applyTheme(store('mdTheme') === '1' ? 1 : 0);
+  fitViewport();
+  window.addEventListener('resize', fitViewport);
+  window.addEventListener('orientationchange', function () { setTimeout(fitViewport, 250); });
+  var nav = $('nav'), main = $('main');
+  PAGES.forEach(function (pg) {
+    var b = h('button', { html: NAV_ICON[pg[0]] }, h('span', { text: pg[1] }));
+    b.addEventListener('click', function () { go(pg[0]); });
+    nav.appendChild(b); navEls[pg[0]] = b;
+    var sec = h('section', { class: 'page', id: pg[0] });
+    pg[2](sec);
+    main.appendChild(sec); pageEls[pg[0]] = sec;
+  });
+  derived.push(function () {
+    if (!S.settings) return;
+    var t = Number(getPath(S.settings, 'appearance.theme')) === 1 ? 1 : 0;
+    applyTheme(t);
+    store('mdTheme', String(t));
+  });
+  derived.push(function () { $('simChip').className = 'chip' + (S.settings && S.settings.simulation && S.settings.simulation.enabled ? ' on' : ''); });
+
+  // Air Ride release on every way the hold can be lost.
+  window.addEventListener('blur', holdStop);
+  window.addEventListener('pagehide', holdStop);
+  window.addEventListener('beforeunload', holdStop);
+  window.addEventListener(HAS_POINTER ? 'pointerup' : 'touchend', function () { if (hold) holdStop(); });
+  document.addEventListener('visibilitychange', function () { if (document.hidden) holdStop(); else airLoop(); });
+
+  syncAll();
+  var saved = store('mdPage');
+  go(saved === 'climate' || saved === 'settings' ? saved : 'air');
+  loadSettings();
+  airLoop();
+}
+init();
+</script>
+</body>
+</html>

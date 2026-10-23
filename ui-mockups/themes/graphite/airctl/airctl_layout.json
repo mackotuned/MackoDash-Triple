@@ -1,0 +1,245 @@
+{
+  "right_480": {
+    "background": "control_480_bg.png",
+    "size": [
+      480,
+      480
+    ],
+    "selector": {
+      "tile_xy": [
+        124,
+        44
+      ],
+      "tile_size": [
+        232,
+        152
+      ],
+      "tiles": {
+        "all": "tiles/sel_all.png",
+        "front": "tiles/sel_front.png",
+        "rear": "tiles/sel_rear.png",
+        "fl": "tiles/sel_fl.png",
+        "fr": "tiles/sel_fr.png",
+        "rl": "tiles/sel_rl.png",
+        "rr": "tiles/sel_rr.png"
+      },
+      "touch_box": [
+        124,
+        44,
+        356,
+        196
+      ],
+      "order": [
+        "all",
+        "front",
+        "rear",
+        "fl",
+        "fr",
+        "rl",
+        "rr"
+      ]
+    },
+    "buttons": {
+      "prev": {
+        "touch_box": [
+          44,
+          82,
+          112,
+          150
+        ],
+        "pressed_tile": "tiles/pressed_prev.png"
+      },
+      "next": {
+        "touch_box": [
+          368,
+          82,
+          436,
+          150
+        ],
+        "pressed_tile": "tiles/pressed_next.png"
+      },
+      "up": {
+        "touch_box": [
+          125,
+          203,
+          355,
+          275
+        ],
+        "pressed_tile": "tiles/pressed_up.png"
+      },
+      "down": {
+        "touch_box": [
+          125,
+          279,
+          355,
+          351
+        ],
+        "pressed_tile": "tiles/pressed_down.png"
+      },
+      "airout": {
+        "touch_box": [
+          105,
+          359,
+          239,
+          419
+        ],
+        "pressed_tile": "tiles/pressed_airout.png"
+      },
+      "exit": {
+        "touch_box": [
+          241,
+          359,
+          375,
+          419
+        ],
+        "pressed_tile": "tiles/pressed_exit.png"
+      }
+    }
+  },
+  "center_800": {
+    "background": "pressure_800_bg.png",
+    "size": [
+      800,
+      800
+    ],
+    "car": {
+      "tile_xy": [
+        268,
+        226
+      ],
+      "tile_size": [
+        264,
+        392
+      ],
+      "tiles": {
+        "none": "tiles/car_none.png",
+        "all": "tiles/car_all.png",
+        "front": "tiles/car_front.png",
+        "rear": "tiles/car_rear.png",
+        "fl": "tiles/car_fl.png",
+        "fr": "tiles/car_fr.png",
+        "rl": "tiles/car_rl.png",
+        "rr": "tiles/car_rr.png"
+      }
+    },
+    "compressor": {
+      "tile_xy": [
+        296,
+        626
+      ],
+      "tile_size": [
+        208,
+        160
+      ],
+      "tiles": {
+        "off": "tiles/comp_off.png",
+        "auto": "tiles/comp_auto.png",
+        "run": "tiles/comp_run.png"
+      },
+      "touch_box": [
+        340,
+        628,
+        460,
+        748
+      ]
+    },
+    "tank_value_box": {
+      "x": 290,
+      "y": 120,
+      "w": 220,
+      "h": 74
+    },
+    "corner_value_boxes": {
+      "fl": {
+        "x": 88,
+        "y": 300,
+        "w": 190,
+        "h": 72
+      },
+      "fr": {
+        "x": 522,
+        "y": 300,
+        "w": 190,
+        "h": 72
+      },
+      "rl": {
+        "x": 88,
+        "y": 488,
+        "w": 190,
+        "h": 72
+      },
+      "rr": {
+        "x": 522,
+        "y": 488,
+        "w": 190,
+        "h": 72
+      }
+    },
+    "tank_ring": {
+      "center": [
+        400,
+        400
+      ],
+      "radius_outer": 383,
+      "width": 21,
+      "range": [
+        0,
+        200
+      ],
+      "segments": [
+        {
+          "start": 218.0,
+          "end": 226.0
+        },
+        {
+          "start": 226.0,
+          "end": 234.0
+        },
+        {
+          "start": 234.0,
+          "end": 242.0
+        },
+        {
+          "start": 242.0,
+          "end": 250.0
+        },
+        {
+          "start": 250.0,
+          "end": 258.0
+        },
+        {
+          "start": 258.0,
+          "end": 266.0
+        },
+        {
+          "start": 266.0,
+          "end": 274.0
+        },
+        {
+          "start": 274.0,
+          "end": 282.0
+        },
+        {
+          "start": 282.0,
+          "end": 290.0
+        },
+        {
+          "start": 290.0,
+          "end": 298.0
+        },
+        {
+          "start": 298.0,
+          "end": 306.0
+        },
+        {
+          "start": 306.0,
+          "end": 314.0
+        },
+        {
+          "start": 314.0,
+          "end": 322.0
+        }
+      ]
+    }
+  }
+}

@@ -13,9 +13,11 @@ ESP32-P4 center controller and two ESP32-S3 side displays.
 ## Architecture
 
 The P4 owns CAN decoding, vehicle state, settings, warnings, logging, odometer,
-Air Ride, and Climate routing. Each display S3 receives normalized state over a
-dedicated one-way UART link and only renders its assigned content. The existing rotary
-controller remains a separate control surface connected to the P4.
+Air Ride, and Climate routing. The display nodes and rotary controller exchange
+role-addressed, CRC-protected frames over the P4's Wi-Fi/UDP network. The center
+remains the RPM tachometer unless covered by an overlay, the left renders
+configurable CAN telemetry, and the right renders Air Ride with an optional
+battery-voltage readout.
 
 ```text
                          CAN
@@ -24,12 +26,17 @@ controller remains a separate control surface connected to the P4.
                   |  Center P4    |
                   |  authority    |
                   +---+-------+---+
-       GPIO30 TX only |       | GPIO31 TX only
-            +--------v-+   +-v--------+
-            | Left S3  |   | Right S3 |
-            | GPIO44 RX|   | GPIO44 RX|
-            | display  |   | display  |
-            +----------+   +----------+
+             Wi-Fi/UDP   |       |   Wi-Fi/UDP
+                +--------v-+   +-v--------+
+                | Left S3  |   | Right S3 |
+                | display  |   | display  |
+                +----------+   +----------+
+                                 Wi-Fi/UDP
+                                    |
+                            +-----v-----+
+                            | Knob S3   |
+                            | controls  |
+                            +-----------+
 ```
 
 ## Projects
@@ -37,19 +44,22 @@ controller remains a separate control surface connected to the P4.
 - `apps/center_p4`: center controller and 800x800 display.
 - `apps/left_s3`: left 480x480 display node.
 - `apps/right_s3`: right 480x480 display node.
-- `components/cluster_protocol`: framed UART protocol with CRC and heartbeat.
-- `components/cluster_uart`: simplex UART framing and stream resynchronization.
-- `components/cluster_board_config`: shared board pin and baud-rate contract.
+- [`apps/knob_s3`](apps/knob_s3/README.md): Elecrow rotary Wi-Fi/UDP control surface.
+- `private/`: private submodule with network credentials, the Air Ride radio
+  bridge, and the climate controller node (firmware, wiring and bench tests).
+  The firmware builds need it checked out.
+- `components/cluster_protocol`: versioned cluster frames with CRC and heartbeat.
+- `components/cluster_wireless`: role-addressed Wi-Fi/UDP transport.
+- `components/cluster_board_config`: shared board and timeout contract.
 - `components/vehicle_data`: normalized cross-device vehicle state.
-- `components/settings_schema`: shared screen and gauge assignments.
-
-## First Milestone
-
-1. Build all three hardware-neutral firmware shells.
-2. Confirm a heartbeat and test vehicle state over each dedicated UART.
-3. Integrate the official Waveshare board support packages.
-4. Render one smooth analog gauge on each screen.
-5. Port proven CAN, settings, Air Ride, and Climate modules from MackoDash.
+- `components/settings_schema`: shared display settings and left telemetry selections.
+- `components/side_display`: Waveshare 2.8C panel bring-up and the shared speedometer
+  used by both side displays.
+- `components/dash_fonts`: Microgramma digit fonts shared by the side displays.
+- `ui-mockups/civic_tach`: retained display artwork, layout metadata, notes,
+  previews, and editable Python generators.
+- [`ui-mockups/knob`](ui-mockups/knob/KNOB_UI_HANDOFF.md): retained rotary UI
+        artwork, layout metadata, previews, and editable generator.
 
 The original MackoDash repositories remain unchanged and are reference sources,
 not submodules or build dependencies.

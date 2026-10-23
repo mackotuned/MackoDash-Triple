@@ -3,7 +3,8 @@
     { "name": "Documentation and shared code", "path": "." },
     { "name": "Center P4", "path": "apps/center_p4" },
     { "name": "Left S3", "path": "apps/left_s3" },
-    { "name": "Right S3", "path": "apps/right_s3" }
+    { "name": "Right S3", "path": "apps/right_s3" },
+    { "name": "Knob S3", "path": "apps/knob_s3" }
   ],
   "settings": {
     "C_Cpp.default.configurationProvider": "espressif.esp-idf-extension",

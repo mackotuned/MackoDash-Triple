@@ -1,6 +1,5 @@
 #include "side_display.h"
 
-#include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -13,6 +12,7 @@
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_panel_rgb.h"
 #include "esp_lcd_st7701.h"
+#include "esp_lcd_touch_gt911.h"
 #include "esp_log.h"
 #include "esp_lv_adapter.h"
 #include "freertos/FreeRTOS.h"
@@ -28,6 +28,7 @@
 #define SIDE_LCD_SPI_SDA_GPIO 1
 #define SIDE_LCD_SPI_SCL_GPIO 2
 #define SIDE_LCD_BACKLIGHT_GPIO 6
+#define SIDE_TOUCH_INT_GPIO 16
 
 #define SIDE_LCD_HSYNC_GPIO 38
 #define SIDE_LCD_VSYNC_GPIO 39
@@ -35,13 +36,65 @@
 #define SIDE_LCD_PCLK_GPIO 41
 
 #define SIDE_LCD_RESET_PIN IO_EXPANDER_PIN_NUM_0
+#define SIDE_TOUCH_RESET_PIN IO_EXPANDER_PIN_NUM_1
 #define SIDE_LCD_CS_PIN IO_EXPANDER_PIN_NUM_2
 
 static const char *TAG = "side_display";
-static lv_obj_t *link_arc;
-static lv_obj_t *link_status;
-static lv_obj_t *sequence_label;
-static lv_obj_t *uptime_label;
+
+static esp_err_t touch_start(i2c_master_bus_handle_t i2c_bus,
+                             esp_io_expander_handle_t io_expander,
+                             lv_display_t *display)
+{
+    ESP_RETURN_ON_ERROR(esp_io_expander_set_dir(
+                            io_expander, SIDE_TOUCH_RESET_PIN,
+                            IO_EXPANDER_OUTPUT),
+                        TAG, "Touch reset pin configuration failed");
+    const gpio_config_t interrupt_select_config = {
+        .pin_bit_mask = 1ULL << SIDE_TOUCH_INT_GPIO,
+        .mode = GPIO_MODE_OUTPUT,
+    };
+    ESP_RETURN_ON_ERROR(gpio_config(&interrupt_select_config), TAG,
+                        "Touch interrupt select failed");
+    ESP_RETURN_ON_ERROR(gpio_set_level(SIDE_TOUCH_INT_GPIO, 0), TAG,
+                        "Touch address select failed");
+    ESP_RETURN_ON_ERROR(esp_io_expander_set_level(
+                            io_expander, SIDE_TOUCH_RESET_PIN, 0),
+                        TAG, "Touch reset assertion failed");
+    vTaskDelay(pdMS_TO_TICKS(10));
+    ESP_RETURN_ON_ERROR(esp_io_expander_set_level(
+                            io_expander, SIDE_TOUCH_RESET_PIN, 1),
+                        TAG, "Touch reset release failed");
+    vTaskDelay(pdMS_TO_TICKS(50));
+    gpio_reset_pin(SIDE_TOUCH_INT_GPIO);
+
+    esp_lcd_panel_io_i2c_config_t touch_io_config =
+        ESP_LCD_TOUCH_IO_I2C_GT911_CONFIG();
+    touch_io_config.scl_speed_hz = 400000;
+    esp_lcd_panel_io_handle_t touch_io = NULL;
+    ESP_RETURN_ON_ERROR(esp_lcd_new_panel_io_i2c(
+                            i2c_bus, &touch_io_config, &touch_io),
+                        TAG, "GT911 panel IO failed");
+    const esp_lcd_touch_config_t touch_config = {
+        .x_max = SIDE_LCD_H_RES,
+        .y_max = SIDE_LCD_V_RES,
+        .rst_gpio_num = GPIO_NUM_NC,
+        .int_gpio_num = SIDE_TOUCH_INT_GPIO,
+        .levels = {
+            .reset = 0,
+            .interrupt = 0,
+        },
+    };
+    esp_lcd_touch_handle_t touch = NULL;
+    ESP_RETURN_ON_ERROR(esp_lcd_touch_new_i2c_gt911(
+                            touch_io, &touch_config, &touch),
+                        TAG, "GT911 initialization failed");
+    const esp_lv_adapter_touch_config_t adapter_touch_config =
+        ESP_LV_ADAPTER_TOUCH_DEFAULT_CONFIG(display, touch);
+    ESP_RETURN_ON_FALSE(esp_lv_adapter_register_touch(
+                            &adapter_touch_config) != NULL,
+                        ESP_FAIL, TAG, "LVGL touch registration failed");
+    return ESP_OK;
+}
 
 static const st7701_lcd_init_cmd_t lcd_init_commands[] = {
     {0xFF, (uint8_t[]){0x77, 0x01, 0x00, 0x00, 0x13}, 5, 0},
@@ -109,7 +162,7 @@ static esp_err_t backlight_start(void)
         .channel = LEDC_CHANNEL_0,
         .intr_type = LEDC_INTR_DISABLE,
         .timer_sel = LEDC_TIMER_0,
-        .duty = 6143,
+        .duty = 7781,
         .hpoint = 0,
     };
 
@@ -120,75 +173,18 @@ static esp_err_t backlight_start(void)
     return ESP_OK;
 }
 
-static lv_obj_t *label_create(lv_obj_t *parent, const char *text,
-                              const lv_font_t *font, uint32_t color)
+esp_err_t side_display_set_brightness(uint8_t percent)
 {
-    lv_obj_t *label = lv_label_create(parent);
-    lv_label_set_text(label, text);
-    lv_obj_set_style_text_font(label, font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(label, lv_color_hex(color), LV_PART_MAIN);
-    lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-    return label;
+    if (percent > 100U) percent = 100U;
+    const uint32_t duty = ((uint32_t)percent * 8191U) / 100U;
+    ESP_RETURN_ON_ERROR(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0,
+                                      duty),
+                        TAG, "Backlight duty failed");
+    return ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
 }
 
-static void link_gauge_create(void)
-{
-    lv_obj_t *screen = lv_screen_active();
-    lv_obj_set_style_bg_color(screen, lv_color_hex(0x070A0D), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
-
-    link_arc = lv_arc_create(screen);
-    lv_obj_set_size(link_arc, 408, 408);
-    lv_obj_center(link_arc);
-    lv_arc_set_bg_angles(link_arc, 135, 45);
-    lv_arc_set_range(link_arc, 0, 59);
-    lv_arc_set_value(link_arc, 0);
-    lv_obj_remove_style(link_arc, NULL, LV_PART_KNOB);
-    lv_obj_set_clickable(link_arc, false);
-    lv_obj_set_style_arc_width(link_arc, 28, LV_PART_MAIN);
-    lv_obj_set_style_arc_color(link_arc, lv_color_hex(0x253039), LV_PART_MAIN);
-    lv_obj_set_style_arc_rounded(link_arc, true, LV_PART_MAIN);
-    lv_obj_set_style_arc_width(link_arc, 28, LV_PART_INDICATOR);
-    lv_obj_set_style_arc_color(link_arc, lv_color_hex(0x20C7C9),
-                               LV_PART_INDICATOR);
-    lv_obj_set_style_arc_rounded(link_arc, true, LV_PART_INDICATOR);
-
-    lv_obj_t *face = lv_obj_create(screen);
-    lv_obj_set_size(face, 304, 304);
-    lv_obj_center(face);
-    lv_obj_set_scrollable(face, false);
-    lv_obj_set_style_radius(face, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(face, lv_color_hex(0x10161B), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(face, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_border_width(face, 2, LV_PART_MAIN);
-    lv_obj_set_style_border_color(face, lv_color_hex(0x32404A), LV_PART_MAIN);
-
-    lv_obj_t *title = label_create(
-        screen, "RIGHT NODE", &lv_font_montserrat_24, 0xEEF4F6);
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 28);
-
-    lv_obj_t *caption = label_create(
-        face, "CLUSTER LINK", &lv_font_montserrat_24, 0x84939D);
-    lv_obj_align(caption, LV_ALIGN_TOP_MID, 0, 55);
-
-    link_status = label_create(
-        face, "WAITING", &lv_font_montserrat_48, 0xF6B73C);
-    lv_obj_align(link_status, LV_ALIGN_CENTER, 0, -30);
-
-    sequence_label = label_create(
-        face, "SEQ --", &lv_font_montserrat_24, 0xD7E1E5);
-    lv_obj_align(sequence_label, LV_ALIGN_CENTER, 0, 30);
-
-    uptime_label = label_create(
-        face, "CENTER --s", &lv_font_montserrat_24, 0x84939D);
-    lv_obj_align(uptime_label, LV_ALIGN_BOTTOM_MID, 0, -54);
-
-    lv_obj_t *footer = label_create(
-        screen, "GPIO44  |  460800", &lv_font_montserrat_24, 0x65747E);
-    lv_obj_align(footer, LV_ALIGN_BOTTOM_MID, 0, -27);
-}
-
-esp_err_t side_display_start(void)
+esp_err_t side_display_start(side_display_builder_t builder, void *context,
+                             bool enable_touch)
 {
     static const int data_gpio_nums[16] = {
         5, 45, 48, 47, 21, 14, 13, 12,
@@ -199,6 +195,8 @@ esp_err_t side_display_start(void)
     esp_lcd_panel_io_handle_t panel_io = NULL;
     esp_lcd_panel_handle_t panel = NULL;
 
+    ESP_RETURN_ON_FALSE(builder != NULL, ESP_ERR_INVALID_ARG, TAG,
+                        "Screen builder is required");
     ESP_LOGI(TAG, "Initializing Waveshare 2.8C 480x480 display");
     const i2c_master_bus_config_t i2c_config = {
         .i2c_port = I2C_NUM_0,
@@ -311,33 +309,28 @@ esp_err_t side_display_start(void)
     ESP_RETURN_ON_FALSE(display != NULL, ESP_FAIL, TAG,
                         "LVGL display registration failed");
     lv_display_set_default(display);
+    if (enable_touch) {
+        ESP_RETURN_ON_ERROR(touch_start(i2c_bus, io_expander, display), TAG,
+                            "Touch initialization failed");
+    }
     ESP_RETURN_ON_ERROR(esp_lv_adapter_start(), TAG,
                         "LVGL task start failed");
     ESP_RETURN_ON_ERROR(esp_lv_adapter_lock(-1), TAG,
                         "LVGL lock failed during UI creation");
-    link_gauge_create();
+    builder(lv_screen_active(), context);
     esp_lv_adapter_unlock();
     ESP_RETURN_ON_ERROR(backlight_start(), TAG,
                         "Backlight initialization failed");
-    ESP_LOGI(TAG, "LVGL right link gauge active");
+    ESP_LOGI(TAG, "LVGL side display active");
     return ESP_OK;
 }
 
-esp_err_t side_display_update_link(uint16_t sequence, uint32_t center_uptime_ms)
+esp_err_t side_display_lock(int32_t timeout_ms)
 {
-    ESP_RETURN_ON_FALSE(link_arc != NULL && link_status != NULL &&
-                            sequence_label != NULL && uptime_label != NULL,
-                        ESP_ERR_INVALID_STATE, TAG,
-                        "Link gauge is not initialized");
-    ESP_RETURN_ON_ERROR(esp_lv_adapter_lock(100), TAG,
-                        "LVGL lock timed out during link update");
-    lv_arc_set_value(link_arc, (center_uptime_ms / 1000U) % 60U);
-    lv_label_set_text(link_status, "ONLINE");
-    lv_obj_set_style_text_color(link_status, lv_color_hex(0x51D88A),
-                                LV_PART_MAIN);
-    lv_label_set_text_fmt(sequence_label, "SEQ %u", (unsigned)sequence);
-    lv_label_set_text_fmt(uptime_label, "CENTER %" PRIu32 "s",
-                          center_uptime_ms / 1000U);
+    return esp_lv_adapter_lock(timeout_ms);
+}
+
+void side_display_unlock(void)
+{
     esp_lv_adapter_unlock();
-    return ESP_OK;
 }

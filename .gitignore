@@ -4,5 +4,7 @@
 **/sdkconfig.old
 .vscode/settings.json
 *.bin
+# Raw RGB565 display images are source assets, not build output.
+!**/assets/**/*.bin
 *.elf
 *.map

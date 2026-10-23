@@ -1,0 +1,292 @@
+{
+  "background": "climate_800_bg.png",
+  "size": [
+    800,
+    800
+  ],
+  "temp": {
+    "value_box": {
+      "x": 330,
+      "y": 118,
+      "w": 140,
+      "h": 74
+    },
+    "range": [
+      0,
+      100
+    ],
+    "step": 5,
+    "unit": "%",
+    "ring": {
+      "center": [
+        400,
+        400
+      ],
+      "radius_outer": 383,
+      "width": 21,
+      "segments": [
+        {
+          "start": 216.0,
+          "end": 219.5
+        },
+        {
+          "start": 221.5,
+          "end": 225.0
+        },
+        {
+          "start": 227.0,
+          "end": 230.5
+        },
+        {
+          "start": 232.5,
+          "end": 236.0
+        },
+        {
+          "start": 238.0,
+          "end": 241.5
+        },
+        {
+          "start": 243.5,
+          "end": 247.0
+        },
+        {
+          "start": 249.0,
+          "end": 252.5
+        },
+        {
+          "start": 254.5,
+          "end": 258.0
+        },
+        {
+          "start": 260.0,
+          "end": 263.5
+        },
+        {
+          "start": 265.5,
+          "end": 269.0
+        },
+        {
+          "start": 271.0,
+          "end": 274.5
+        },
+        {
+          "start": 276.5,
+          "end": 280.0
+        },
+        {
+          "start": 282.0,
+          "end": 285.5
+        },
+        {
+          "start": 287.5,
+          "end": 291.0
+        },
+        {
+          "start": 293.0,
+          "end": 296.5
+        },
+        {
+          "start": 298.5,
+          "end": 302.0
+        },
+        {
+          "start": 304.0,
+          "end": 307.5
+        },
+        {
+          "start": 309.5,
+          "end": 313.0
+        },
+        {
+          "start": 315.0,
+          "end": 318.5
+        },
+        {
+          "start": 320.5,
+          "end": 324.0
+        }
+      ],
+      "red_from_segment": 10
+    }
+  },
+  "fan": {
+    "value_box": {
+      "x": 330,
+      "y": 608,
+      "w": 140,
+      "h": 74
+    },
+    "range": [
+      0,
+      4
+    ],
+    "step": 1,
+    "ring": {
+      "center": [
+        400,
+        400
+      ],
+      "radius_outer": 383,
+      "width": 21,
+      "segments": [
+        {
+          "start": 118.5,
+          "end": 144.0
+        },
+        {
+          "start": 91.0,
+          "end": 116.5
+        },
+        {
+          "start": 63.5,
+          "end": 89.0
+        },
+        {
+          "start": 36.0,
+          "end": 61.5
+        }
+      ],
+      "order": "segment 0 = left (OFF side)"
+    }
+  },
+  "mode": [
+    {
+      "id": "face",
+      "name": "FACE",
+      "touch_box": [
+        106,
+        346,
+        214,
+        484
+      ],
+      "tile_xy": [
+        102,
+        342
+      ],
+      "tile_size": [
+        116,
+        146
+      ],
+      "tile_on": "tiles/mode_face_on.png",
+      "tile_off": "tiles/mode_face_off.png"
+    },
+    {
+      "id": "bilevel",
+      "name": "BI-LEVEL",
+      "touch_box": [
+        226,
+        346,
+        334,
+        484
+      ],
+      "tile_xy": [
+        222,
+        342
+      ],
+      "tile_size": [
+        116,
+        146
+      ],
+      "tile_on": "tiles/mode_bilevel_on.png",
+      "tile_off": "tiles/mode_bilevel_off.png"
+    },
+    {
+      "id": "feet",
+      "name": "FEET",
+      "touch_box": [
+        346,
+        346,
+        454,
+        484
+      ],
+      "tile_xy": [
+        342,
+        342
+      ],
+      "tile_size": [
+        116,
+        146
+      ],
+      "tile_on": "tiles/mode_feet_on.png",
+      "tile_off": "tiles/mode_feet_off.png"
+    },
+    {
+      "id": "feetdef",
+      "name": "FEET/DEF",
+      "touch_box": [
+        466,
+        346,
+        574,
+        484
+      ],
+      "tile_xy": [
+        462,
+        342
+      ],
+      "tile_size": [
+        116,
+        146
+      ],
+      "tile_on": "tiles/mode_feetdef_on.png",
+      "tile_off": "tiles/mode_feetdef_off.png"
+    },
+    {
+      "id": "defrost",
+      "name": "DEFROST",
+      "touch_box": [
+        586,
+        346,
+        694,
+        484
+      ],
+      "tile_xy": [
+        582,
+        342
+      ],
+      "tile_size": [
+        116,
+        146
+      ],
+      "tile_on": "tiles/mode_defrost_on.png",
+      "tile_off": "tiles/mode_defrost_off.png"
+    }
+  ],
+  "buttons": {
+    "temp_minus": {
+      "touch_box": [
+        166,
+        130,
+        258,
+        222
+      ],
+      "pressed_tile": "tiles/pressed_temp_minus.png"
+    },
+    "temp_plus": {
+      "touch_box": [
+        542,
+        130,
+        634,
+        222
+      ],
+      "pressed_tile": "tiles/pressed_temp_plus.png"
+    },
+    "fan_minus": {
+      "touch_box": [
+        166,
+        578,
+        258,
+        670
+      ],
+      "pressed_tile": "tiles/pressed_fan_minus.png"
+    },
+    "fan_plus": {
+      "touch_box": [
+        542,
+        578,
+        634,
+        670
+      ],
+      "pressed_tile": "tiles/pressed_fan_plus.png"
+    }
+  }
+}

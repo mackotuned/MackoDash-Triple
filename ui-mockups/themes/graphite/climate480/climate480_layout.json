@@ -1,0 +1,338 @@
+{
+  "background": "climate_480_bg.png",
+  "size": [
+    480,
+    480
+  ],
+  "name_strip": {
+    "tile_xy": [
+      130,
+      276
+    ],
+    "tile_size": [
+      220,
+      24
+    ],
+    "none_tile": "tiles/name_none.png"
+  },
+  "temp": {
+    "value_box": {
+      "x": 186,
+      "y": 66,
+      "w": 108,
+      "h": 46
+    },
+    "range": [
+      0,
+      100
+    ],
+    "step": 5,
+    "ring": {
+      "center": [
+        240,
+        240
+      ],
+      "radius_outer": 230,
+      "width": 14,
+      "segments": [
+        {
+          "start": 216.0,
+          "end": 221.4
+        },
+        {
+          "start": 221.4,
+          "end": 226.8
+        },
+        {
+          "start": 226.8,
+          "end": 232.2
+        },
+        {
+          "start": 232.2,
+          "end": 237.6
+        },
+        {
+          "start": 237.6,
+          "end": 243.0
+        },
+        {
+          "start": 243.0,
+          "end": 248.4
+        },
+        {
+          "start": 248.4,
+          "end": 253.8
+        },
+        {
+          "start": 253.8,
+          "end": 259.2
+        },
+        {
+          "start": 259.2,
+          "end": 264.6
+        },
+        {
+          "start": 264.6,
+          "end": 270.0
+        },
+        {
+          "start": 270.0,
+          "end": 275.4
+        },
+        {
+          "start": 275.4,
+          "end": 280.8
+        },
+        {
+          "start": 280.8,
+          "end": 286.2
+        },
+        {
+          "start": 286.2,
+          "end": 291.6
+        },
+        {
+          "start": 291.6,
+          "end": 297.0
+        },
+        {
+          "start": 297.0,
+          "end": 302.4
+        },
+        {
+          "start": 302.4,
+          "end": 307.8
+        },
+        {
+          "start": 307.8,
+          "end": 313.2
+        },
+        {
+          "start": 313.2,
+          "end": 318.6
+        },
+        {
+          "start": 318.6,
+          "end": 324.0
+        }
+      ],
+      "red_from_segment": 10
+    }
+  },
+  "fan": {
+    "value_box": {
+      "x": 186,
+      "y": 350,
+      "w": 108,
+      "h": 46
+    },
+    "range": [
+      0,
+      4
+    ],
+    "step": 1,
+    "ring": {
+      "center": [
+        240,
+        240
+      ],
+      "radius_outer": 230,
+      "width": 14,
+      "segments": [
+        {
+          "start": 117.0,
+          "end": 144.0
+        },
+        {
+          "start": 90.0,
+          "end": 117.0
+        },
+        {
+          "start": 63.0,
+          "end": 90.0
+        },
+        {
+          "start": 36.0,
+          "end": 63.0
+        }
+      ]
+    }
+  },
+  "mode": [
+    {
+      "id": "face",
+      "name": "FACE",
+      "touch_box": [
+        44,
+        192,
+        116,
+        264
+      ],
+      "tile_xy": [
+        40,
+        186
+      ],
+      "tile_size": [
+        80,
+        84
+      ],
+      "tile_on": "tiles/mode_face_on.png",
+      "tile_off": "tiles/mode_face_off.png",
+      "name_tile": "tiles/name_face.png"
+    },
+    {
+      "id": "bilevel",
+      "name": "BI-LEVEL",
+      "touch_box": [
+        124,
+        192,
+        196,
+        264
+      ],
+      "tile_xy": [
+        120,
+        186
+      ],
+      "tile_size": [
+        80,
+        84
+      ],
+      "tile_on": "tiles/mode_bilevel_on.png",
+      "tile_off": "tiles/mode_bilevel_off.png",
+      "name_tile": "tiles/name_bilevel.png"
+    },
+    {
+      "id": "feet",
+      "name": "FEET",
+      "touch_box": [
+        204,
+        192,
+        276,
+        264
+      ],
+      "tile_xy": [
+        200,
+        186
+      ],
+      "tile_size": [
+        80,
+        84
+      ],
+      "tile_on": "tiles/mode_feet_on.png",
+      "tile_off": "tiles/mode_feet_off.png",
+      "name_tile": "tiles/name_feet.png"
+    },
+    {
+      "id": "feetdef",
+      "name": "FEET/DEF",
+      "touch_box": [
+        284,
+        192,
+        356,
+        264
+      ],
+      "tile_xy": [
+        280,
+        186
+      ],
+      "tile_size": [
+        80,
+        84
+      ],
+      "tile_on": "tiles/mode_feetdef_on.png",
+      "tile_off": "tiles/mode_feetdef_off.png",
+      "name_tile": "tiles/name_feetdef.png"
+    },
+    {
+      "id": "defrost",
+      "name": "DEFROST",
+      "touch_box": [
+        364,
+        192,
+        436,
+        264
+      ],
+      "tile_xy": [
+        360,
+        186
+      ],
+      "tile_size": [
+        80,
+        84
+      ],
+      "tile_on": "tiles/mode_defrost_on.png",
+      "tile_off": "tiles/mode_defrost_off.png",
+      "name_tile": "tiles/name_defrost.png"
+    }
+  ],
+  "buttons": {
+    "temp_minus": {
+      "touch_box": [
+        89,
+        63,
+        163,
+        137
+      ],
+      "tile_xy": [
+        96,
+        70
+      ],
+      "tile_size": [
+        60,
+        60
+      ],
+      "pressed_tile": "tiles/pressed_temp_minus.png"
+    },
+    "temp_plus": {
+      "touch_box": [
+        317,
+        63,
+        391,
+        137
+      ],
+      "tile_xy": [
+        324,
+        70
+      ],
+      "tile_size": [
+        60,
+        60
+      ],
+      "pressed_tile": "tiles/pressed_temp_plus.png"
+    },
+    "fan_minus": {
+      "touch_box": [
+        89,
+        339,
+        163,
+        413
+      ],
+      "tile_xy": [
+        96,
+        346
+      ],
+      "tile_size": [
+        60,
+        60
+      ],
+      "pressed_tile": "tiles/pressed_fan_minus.png"
+    },
+    "fan_plus": {
+      "touch_box": [
+        317,
+        339,
+        391,
+        413
+      ],
+      "tile_xy": [
+        324,
+        346
+      ],
+      "tile_size": [
+        60,
+        60
+      ],
+      "pressed_tile": "tiles/pressed_fan_plus.png"
+    }
+  }
+}

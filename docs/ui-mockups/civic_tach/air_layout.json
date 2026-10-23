@@ -1,0 +1,93 @@
+{
+  "screen": [
+    480,
+    480
+  ],
+  "round": true,
+  "center": [
+    240,
+    240
+  ],
+  "items": {
+    "fl": {
+      "value_box": {
+        "x": 91,
+        "y": 126,
+        "w": 110,
+        "h": 40
+      },
+      "align": "center",
+      "cap_height": 28,
+      "unit": "PSI",
+      "range": [
+        0,
+        150
+      ],
+      "format": "%d"
+    },
+    "fr": {
+      "value_box": {
+        "x": 279,
+        "y": 126,
+        "w": 110,
+        "h": 40
+      },
+      "align": "center",
+      "cap_height": 28,
+      "unit": "PSI",
+      "range": [
+        0,
+        150
+      ],
+      "format": "%d"
+    },
+    "rl": {
+      "value_box": {
+        "x": 91,
+        "y": 314,
+        "w": 110,
+        "h": 40
+      },
+      "align": "center",
+      "cap_height": 28,
+      "unit": "PSI",
+      "range": [
+        0,
+        150
+      ],
+      "format": "%d"
+    },
+    "rr": {
+      "value_box": {
+        "x": 279,
+        "y": 314,
+        "w": 110,
+        "h": 40
+      },
+      "align": "center",
+      "cap_height": 28,
+      "unit": "PSI",
+      "range": [
+        0,
+        150
+      ],
+      "format": "%d"
+    },
+    "tank": {
+      "value_box": {
+        "x": 140,
+        "y": 204,
+        "w": 200,
+        "h": 62
+      },
+      "align": "center",
+      "cap_height": 44,
+      "unit": "PSI",
+      "range": [
+        0,
+        200
+      ],
+      "format": "%d"
+    }
+  }
+}

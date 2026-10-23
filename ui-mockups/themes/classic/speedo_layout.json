@@ -1,0 +1,16 @@
+{
+  "needle": {
+    "center": [
+      240,
+      240
+    ],
+    "length": 218,
+    "hub_radius": 30,
+    "range": [
+      0,
+      160
+    ],
+    "lvgl_rotation": 140.0,
+    "lvgl_sweep": 260.0
+  }
+}

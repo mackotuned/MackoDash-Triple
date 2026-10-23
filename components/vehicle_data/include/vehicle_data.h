@@ -18,6 +18,7 @@ typedef enum {
     VEHICLE_DATA_FUEL_PRESSURE,
     VEHICLE_DATA_BATTERY,
     VEHICLE_DATA_THROTTLE,
+    VEHICLE_DATA_FUEL_LEVEL,
     VEHICLE_DATA_COUNT,
 } vehicle_data_channel_t;
 
@@ -33,6 +34,7 @@ typedef struct {
     uint16_t fuel_pressure_tenths_kpa;
     uint16_t battery_mv;
     uint16_t throttle_tenths_percent;
+    uint16_t fuel_level_tenths_percent;
     uint32_t valid_channels;
     uint32_t warning_channels;
 } vehicle_fast_state_t;
@@ -56,6 +58,13 @@ typedef struct {
 static inline uint32_t vehicle_data_channel_mask(vehicle_data_channel_t channel)
 {
     return channel < VEHICLE_DATA_COUNT ? (1UL << (uint32_t)channel) : 0UL;
+}
+
+static inline bool vehicle_data_channel_valid(uint32_t valid_channels,
+                                              uint32_t channel)
+{
+    return channel < VEHICLE_DATA_COUNT &&
+           (valid_channels & (1UL << channel)) != 0U;
 }
 
 #ifdef __cplusplus

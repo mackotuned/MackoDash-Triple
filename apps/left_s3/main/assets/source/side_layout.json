@@ -1,0 +1,174 @@
+{
+  "screen": [
+    480,
+    480
+  ],
+  "round": true,
+  "center": [
+    240,
+    240
+  ],
+  "angle_note": "LVGL degrees: 0 = 3 o'clock, clockwise",
+  "items": {
+    "fuel_arc": {
+      "radius_outer": 226,
+      "width": 16,
+      "segment0": "bottom",
+      "warn_from_segment": null,
+      "segments": [
+        {
+          "start": 128.0,
+          "end": 139.07
+        },
+        {
+          "start": 141.28,
+          "end": 152.35
+        },
+        {
+          "start": 154.55,
+          "end": 165.62
+        },
+        {
+          "start": 167.82,
+          "end": 178.9
+        },
+        {
+          "start": 181.1,
+          "end": 192.18
+        },
+        {
+          "start": 194.38,
+          "end": 205.45
+        },
+        {
+          "start": 207.65,
+          "end": 218.72
+        },
+        {
+          "start": 220.92,
+          "end": 232.0
+        }
+      ],
+      "reserve_segment": 0
+    },
+    "water_arc": {
+      "radius_outer": 226,
+      "width": 16,
+      "segment0": "bottom",
+      "warn_from_segment": 8,
+      "segments": [
+        {
+          "start": 43.58,
+          "end": 52.0
+        },
+        {
+          "start": 32.96,
+          "end": 41.38
+        },
+        {
+          "start": 22.34,
+          "end": 30.76
+        },
+        {
+          "start": 11.72,
+          "end": 20.14
+        },
+        {
+          "start": 1.1,
+          "end": 9.52
+        },
+        {
+          "start": 350.48,
+          "end": 358.9
+        },
+        {
+          "start": 339.86,
+          "end": 348.28
+        },
+        {
+          "start": 329.24,
+          "end": 337.66
+        },
+        {
+          "start": 318.62,
+          "end": 327.04
+        },
+        {
+          "start": 308.0,
+          "end": 316.42
+        }
+      ],
+      "mapping": {
+        "type": "piecewise",
+        "start_f": 60,
+        "mid_f": 185,
+        "max_f": 225,
+        "note": "60->0 segs, 185->5 segs (middle tick), 225->10 segs"
+      }
+    },
+    "speed": {
+      "value_box": {
+        "x": 160,
+        "y": 42,
+        "w": 160,
+        "h": 52
+      },
+      "align": "center",
+      "cap_height": 30,
+      "unit": "MPH",
+      "range": [
+        0,
+        200
+      ],
+      "format": "%d"
+    },
+    "boost": {
+      "value_box": {
+        "x": 140,
+        "y": 166,
+        "w": 200,
+        "h": 70
+      },
+      "align": "center",
+      "cap_height": 50,
+      "unit": "inHg/PSI",
+      "range": [
+        -30,
+        20
+      ],
+      "format": "%.1f"
+    },
+    "iat": {
+      "value_box": {
+        "x": 126,
+        "y": 295,
+        "w": 104,
+        "h": 36
+      },
+      "align": "center",
+      "cap_height": 24,
+      "unit": "°F",
+      "range": [
+        0,
+        200
+      ],
+      "format": "%d"
+    },
+    "battery": {
+      "value_box": {
+        "x": 250,
+        "y": 295,
+        "w": 104,
+        "h": 36
+      },
+      "align": "center",
+      "cap_height": 24,
+      "unit": "V",
+      "range": [
+        10,
+        16
+      ],
+      "format": "%.1f"
+    }
+  }
+}

@@ -1,0 +1,1157 @@
+{
+  "screen": [
+    240,
+    240
+  ],
+  "round": true,
+  "marker": {
+    "radius_outer": 112,
+    "width": 5,
+    "note": "baked into every menu page; listed for reference"
+  },
+  "menus": {
+    "main": [
+      {
+        "id": "screen",
+        "image": "main_0_screen"
+      },
+      {
+        "id": "rec",
+        "image": "main_1_rec"
+      },
+      {
+        "id": "air",
+        "image": "main_2_air"
+      },
+      {
+        "id": "climate",
+        "image": "main_3_climate"
+      },
+      {
+        "id": "logs",
+        "image": "main_4_logs"
+      },
+      {
+        "id": "bright",
+        "image": "main_5_bright"
+      }
+    ],
+    "screen_target": [
+      {
+        "id": "left",
+        "image": "screen_target_0_left"
+      },
+      {
+        "id": "center",
+        "image": "screen_target_1_center"
+      },
+      {
+        "id": "right",
+        "image": "screen_target_2_right"
+      },
+      {
+        "id": "back",
+        "image": "screen_target_3_back"
+      }
+    ],
+    "air": [
+      {
+        "id": "all",
+        "image": "air_0_all"
+      },
+      {
+        "id": "front",
+        "image": "air_1_front"
+      },
+      {
+        "id": "rear",
+        "image": "air_2_rear"
+      },
+      {
+        "id": "fl",
+        "image": "air_3_fl"
+      },
+      {
+        "id": "fr",
+        "image": "air_4_fr"
+      },
+      {
+        "id": "rl",
+        "image": "air_5_rl"
+      },
+      {
+        "id": "rr",
+        "image": "air_6_rr"
+      },
+      {
+        "id": "back",
+        "image": "air_7_back"
+      }
+    ],
+    "climate": [
+      {
+        "id": "fan",
+        "image": "climate_0_fan"
+      },
+      {
+        "id": "temp",
+        "image": "climate_1_temp"
+      },
+      {
+        "id": "mode",
+        "image": "climate_2_mode"
+      },
+      {
+        "id": "back",
+        "image": "climate_3_back"
+      }
+    ],
+    "mode": [
+      {
+        "id": "face",
+        "image": "mode_0_face"
+      },
+      {
+        "id": "bilevel",
+        "image": "mode_1_bilevel"
+      },
+      {
+        "id": "feet",
+        "image": "mode_2_feet"
+      },
+      {
+        "id": "feetdef",
+        "image": "mode_3_feetdef"
+      },
+      {
+        "id": "defrost",
+        "image": "mode_4_defrost"
+      },
+      {
+        "id": "back",
+        "image": "mode_5_back"
+      }
+    ],
+    "logs": [
+      {
+        "id": "left",
+        "image": "logs_0_left"
+      },
+      {
+        "id": "center",
+        "image": "logs_1_center"
+      },
+      {
+        "id": "right",
+        "image": "logs_2_right"
+      },
+      {
+        "id": "back",
+        "image": "logs_3_back"
+      }
+    ],
+    "screen_source": {
+      "left": [
+        {
+          "id": "speedo",
+          "image": "screen_source_0_speedo"
+        },
+        {
+          "id": "data",
+          "image": "screen_source_1_data"
+        },
+        {
+          "id": "climate",
+          "image": "screen_source_2_climate"
+        },
+        {
+          "id": "back",
+          "image": "screen_source_3_back"
+        }
+      ],
+      "center": [
+        {
+          "id": "tach",
+          "image": "screen_source_0_tach"
+        },
+        {
+          "id": "air",
+          "image": "screen_source_1_air"
+        },
+        {
+          "id": "logs",
+          "image": "screen_source_2_logs"
+        },
+        {
+          "id": "back",
+          "image": "screen_source_3_back"
+        }
+      ],
+      "right": [
+        {
+          "id": "speedo",
+          "image": "screen_source_0_speedo"
+        },
+        {
+          "id": "air",
+          "image": "screen_source_1_air"
+        },
+        {
+          "id": "climate",
+          "image": "screen_source_2_climate"
+        },
+        {
+          "id": "back",
+          "image": "screen_source_3_back"
+        }
+      ]
+    }
+  },
+  "adjust": {
+    "air_fl": {
+      "value_box": {
+        "x": 40,
+        "y": 96,
+        "w": 160,
+        "h": 48
+      },
+      "value_cap_px": 32,
+      "ring": {
+        "radius_outer": 113,
+        "width": 11,
+        "segments": [
+          {
+            "start": 140.0,
+            "end": 153.0
+          },
+          {
+            "start": 153.0,
+            "end": 166.0
+          },
+          {
+            "start": 166.0,
+            "end": 179.0
+          },
+          {
+            "start": 179.0,
+            "end": 192.0
+          },
+          {
+            "start": 192.0,
+            "end": 205.0
+          },
+          {
+            "start": 205.0,
+            "end": 218.0
+          },
+          {
+            "start": 218.0,
+            "end": 231.0
+          },
+          {
+            "start": 231.0,
+            "end": 244.0
+          },
+          {
+            "start": 244.0,
+            "end": 257.0
+          },
+          {
+            "start": 257.0,
+            "end": 270.0
+          },
+          {
+            "start": 270.0,
+            "end": 283.0
+          },
+          {
+            "start": 283.0,
+            "end": 296.0
+          },
+          {
+            "start": 296.0,
+            "end": 309.0
+          },
+          {
+            "start": 309.0,
+            "end": 322.0
+          },
+          {
+            "start": 322.0,
+            "end": 335.0
+          },
+          {
+            "start": 335.0,
+            "end": 348.0
+          },
+          {
+            "start": 348.0,
+            "end": 1.0
+          },
+          {
+            "start": 1.0,
+            "end": 14.0
+          },
+          {
+            "start": 14.0,
+            "end": 27.0
+          },
+          {
+            "start": 27.0,
+            "end": 40.0
+          }
+        ]
+      },
+      "range": [
+        0,
+        150
+      ],
+      "unit": "PSI"
+    },
+    "air_fr": {
+      "value_box": {
+        "x": 40,
+        "y": 96,
+        "w": 160,
+        "h": 48
+      },
+      "value_cap_px": 32,
+      "ring": {
+        "radius_outer": 113,
+        "width": 11,
+        "segments": [
+          {
+            "start": 140.0,
+            "end": 153.0
+          },
+          {
+            "start": 153.0,
+            "end": 166.0
+          },
+          {
+            "start": 166.0,
+            "end": 179.0
+          },
+          {
+            "start": 179.0,
+            "end": 192.0
+          },
+          {
+            "start": 192.0,
+            "end": 205.0
+          },
+          {
+            "start": 205.0,
+            "end": 218.0
+          },
+          {
+            "start": 218.0,
+            "end": 231.0
+          },
+          {
+            "start": 231.0,
+            "end": 244.0
+          },
+          {
+            "start": 244.0,
+            "end": 257.0
+          },
+          {
+            "start": 257.0,
+            "end": 270.0
+          },
+          {
+            "start": 270.0,
+            "end": 283.0
+          },
+          {
+            "start": 283.0,
+            "end": 296.0
+          },
+          {
+            "start": 296.0,
+            "end": 309.0
+          },
+          {
+            "start": 309.0,
+            "end": 322.0
+          },
+          {
+            "start": 322.0,
+            "end": 335.0
+          },
+          {
+            "start": 335.0,
+            "end": 348.0
+          },
+          {
+            "start": 348.0,
+            "end": 1.0
+          },
+          {
+            "start": 1.0,
+            "end": 14.0
+          },
+          {
+            "start": 14.0,
+            "end": 27.0
+          },
+          {
+            "start": 27.0,
+            "end": 40.0
+          }
+        ]
+      },
+      "range": [
+        0,
+        150
+      ],
+      "unit": "PSI"
+    },
+    "air_rl": {
+      "value_box": {
+        "x": 40,
+        "y": 96,
+        "w": 160,
+        "h": 48
+      },
+      "value_cap_px": 32,
+      "ring": {
+        "radius_outer": 113,
+        "width": 11,
+        "segments": [
+          {
+            "start": 140.0,
+            "end": 153.0
+          },
+          {
+            "start": 153.0,
+            "end": 166.0
+          },
+          {
+            "start": 166.0,
+            "end": 179.0
+          },
+          {
+            "start": 179.0,
+            "end": 192.0
+          },
+          {
+            "start": 192.0,
+            "end": 205.0
+          },
+          {
+            "start": 205.0,
+            "end": 218.0
+          },
+          {
+            "start": 218.0,
+            "end": 231.0
+          },
+          {
+            "start": 231.0,
+            "end": 244.0
+          },
+          {
+            "start": 244.0,
+            "end": 257.0
+          },
+          {
+            "start": 257.0,
+            "end": 270.0
+          },
+          {
+            "start": 270.0,
+            "end": 283.0
+          },
+          {
+            "start": 283.0,
+            "end": 296.0
+          },
+          {
+            "start": 296.0,
+            "end": 309.0
+          },
+          {
+            "start": 309.0,
+            "end": 322.0
+          },
+          {
+            "start": 322.0,
+            "end": 335.0
+          },
+          {
+            "start": 335.0,
+            "end": 348.0
+          },
+          {
+            "start": 348.0,
+            "end": 1.0
+          },
+          {
+            "start": 1.0,
+            "end": 14.0
+          },
+          {
+            "start": 14.0,
+            "end": 27.0
+          },
+          {
+            "start": 27.0,
+            "end": 40.0
+          }
+        ]
+      },
+      "range": [
+        0,
+        150
+      ],
+      "unit": "PSI"
+    },
+    "air_rr": {
+      "value_box": {
+        "x": 40,
+        "y": 96,
+        "w": 160,
+        "h": 48
+      },
+      "value_cap_px": 32,
+      "ring": {
+        "radius_outer": 113,
+        "width": 11,
+        "segments": [
+          {
+            "start": 140.0,
+            "end": 153.0
+          },
+          {
+            "start": 153.0,
+            "end": 166.0
+          },
+          {
+            "start": 166.0,
+            "end": 179.0
+          },
+          {
+            "start": 179.0,
+            "end": 192.0
+          },
+          {
+            "start": 192.0,
+            "end": 205.0
+          },
+          {
+            "start": 205.0,
+            "end": 218.0
+          },
+          {
+            "start": 218.0,
+            "end": 231.0
+          },
+          {
+            "start": 231.0,
+            "end": 244.0
+          },
+          {
+            "start": 244.0,
+            "end": 257.0
+          },
+          {
+            "start": 257.0,
+            "end": 270.0
+          },
+          {
+            "start": 270.0,
+            "end": 283.0
+          },
+          {
+            "start": 283.0,
+            "end": 296.0
+          },
+          {
+            "start": 296.0,
+            "end": 309.0
+          },
+          {
+            "start": 309.0,
+            "end": 322.0
+          },
+          {
+            "start": 322.0,
+            "end": 335.0
+          },
+          {
+            "start": 335.0,
+            "end": 348.0
+          },
+          {
+            "start": 348.0,
+            "end": 1.0
+          },
+          {
+            "start": 1.0,
+            "end": 14.0
+          },
+          {
+            "start": 14.0,
+            "end": 27.0
+          },
+          {
+            "start": 27.0,
+            "end": 40.0
+          }
+        ]
+      },
+      "range": [
+        0,
+        150
+      ],
+      "unit": "PSI"
+    },
+    "air_front": {
+      "value_box": {
+        "x": 40,
+        "y": 96,
+        "w": 160,
+        "h": 48
+      },
+      "value_cap_px": 32,
+      "ring": {
+        "radius_outer": 113,
+        "width": 11,
+        "segments": [
+          {
+            "start": 140.0,
+            "end": 153.0
+          },
+          {
+            "start": 153.0,
+            "end": 166.0
+          },
+          {
+            "start": 166.0,
+            "end": 179.0
+          },
+          {
+            "start": 179.0,
+            "end": 192.0
+          },
+          {
+            "start": 192.0,
+            "end": 205.0
+          },
+          {
+            "start": 205.0,
+            "end": 218.0
+          },
+          {
+            "start": 218.0,
+            "end": 231.0
+          },
+          {
+            "start": 231.0,
+            "end": 244.0
+          },
+          {
+            "start": 244.0,
+            "end": 257.0
+          },
+          {
+            "start": 257.0,
+            "end": 270.0
+          },
+          {
+            "start": 270.0,
+            "end": 283.0
+          },
+          {
+            "start": 283.0,
+            "end": 296.0
+          },
+          {
+            "start": 296.0,
+            "end": 309.0
+          },
+          {
+            "start": 309.0,
+            "end": 322.0
+          },
+          {
+            "start": 322.0,
+            "end": 335.0
+          },
+          {
+            "start": 335.0,
+            "end": 348.0
+          },
+          {
+            "start": 348.0,
+            "end": 1.0
+          },
+          {
+            "start": 1.0,
+            "end": 14.0
+          },
+          {
+            "start": 14.0,
+            "end": 27.0
+          },
+          {
+            "start": 27.0,
+            "end": 40.0
+          }
+        ]
+      },
+      "range": [
+        0,
+        150
+      ],
+      "unit": "PSI"
+    },
+    "air_rear": {
+      "value_box": {
+        "x": 40,
+        "y": 96,
+        "w": 160,
+        "h": 48
+      },
+      "value_cap_px": 32,
+      "ring": {
+        "radius_outer": 113,
+        "width": 11,
+        "segments": [
+          {
+            "start": 140.0,
+            "end": 153.0
+          },
+          {
+            "start": 153.0,
+            "end": 166.0
+          },
+          {
+            "start": 166.0,
+            "end": 179.0
+          },
+          {
+            "start": 179.0,
+            "end": 192.0
+          },
+          {
+            "start": 192.0,
+            "end": 205.0
+          },
+          {
+            "start": 205.0,
+            "end": 218.0
+          },
+          {
+            "start": 218.0,
+            "end": 231.0
+          },
+          {
+            "start": 231.0,
+            "end": 244.0
+          },
+          {
+            "start": 244.0,
+            "end": 257.0
+          },
+          {
+            "start": 257.0,
+            "end": 270.0
+          },
+          {
+            "start": 270.0,
+            "end": 283.0
+          },
+          {
+            "start": 283.0,
+            "end": 296.0
+          },
+          {
+            "start": 296.0,
+            "end": 309.0
+          },
+          {
+            "start": 309.0,
+            "end": 322.0
+          },
+          {
+            "start": 322.0,
+            "end": 335.0
+          },
+          {
+            "start": 335.0,
+            "end": 348.0
+          },
+          {
+            "start": 348.0,
+            "end": 1.0
+          },
+          {
+            "start": 1.0,
+            "end": 14.0
+          },
+          {
+            "start": 14.0,
+            "end": 27.0
+          },
+          {
+            "start": 27.0,
+            "end": 40.0
+          }
+        ]
+      },
+      "range": [
+        0,
+        150
+      ],
+      "unit": "PSI"
+    },
+    "air_all": {
+      "value_box": {
+        "x": 40,
+        "y": 96,
+        "w": 160,
+        "h": 48
+      },
+      "value_cap_px": 32,
+      "ring": {
+        "radius_outer": 113,
+        "width": 11,
+        "segments": [
+          {
+            "start": 140.0,
+            "end": 153.0
+          },
+          {
+            "start": 153.0,
+            "end": 166.0
+          },
+          {
+            "start": 166.0,
+            "end": 179.0
+          },
+          {
+            "start": 179.0,
+            "end": 192.0
+          },
+          {
+            "start": 192.0,
+            "end": 205.0
+          },
+          {
+            "start": 205.0,
+            "end": 218.0
+          },
+          {
+            "start": 218.0,
+            "end": 231.0
+          },
+          {
+            "start": 231.0,
+            "end": 244.0
+          },
+          {
+            "start": 244.0,
+            "end": 257.0
+          },
+          {
+            "start": 257.0,
+            "end": 270.0
+          },
+          {
+            "start": 270.0,
+            "end": 283.0
+          },
+          {
+            "start": 283.0,
+            "end": 296.0
+          },
+          {
+            "start": 296.0,
+            "end": 309.0
+          },
+          {
+            "start": 309.0,
+            "end": 322.0
+          },
+          {
+            "start": 322.0,
+            "end": 335.0
+          },
+          {
+            "start": 335.0,
+            "end": 348.0
+          },
+          {
+            "start": 348.0,
+            "end": 1.0
+          },
+          {
+            "start": 1.0,
+            "end": 14.0
+          },
+          {
+            "start": 14.0,
+            "end": 27.0
+          },
+          {
+            "start": 27.0,
+            "end": 40.0
+          }
+        ]
+      },
+      "range": [
+        0,
+        150
+      ],
+      "unit": "PSI"
+    },
+    "fan": {
+      "value_box": {
+        "x": 40,
+        "y": 96,
+        "w": 160,
+        "h": 48
+      },
+      "value_cap_px": 32,
+      "ring": {
+        "radius_outer": 113,
+        "width": 11,
+        "segments": [
+          {
+            "start": 140.0,
+            "end": 205.0
+          },
+          {
+            "start": 205.0,
+            "end": 270.0
+          },
+          {
+            "start": 270.0,
+            "end": 335.0
+          },
+          {
+            "start": 335.0,
+            "end": 40.0
+          }
+        ]
+      },
+      "range": [
+        0,
+        4
+      ]
+    },
+    "temp": {
+      "value_box": {
+        "x": 40,
+        "y": 96,
+        "w": 160,
+        "h": 48
+      },
+      "value_cap_px": 32,
+      "ring": {
+        "radius_outer": 113,
+        "width": 11,
+        "segments": [
+          {
+            "start": 140.0,
+            "end": 153.0
+          },
+          {
+            "start": 153.0,
+            "end": 166.0
+          },
+          {
+            "start": 166.0,
+            "end": 179.0
+          },
+          {
+            "start": 179.0,
+            "end": 192.0
+          },
+          {
+            "start": 192.0,
+            "end": 205.0
+          },
+          {
+            "start": 205.0,
+            "end": 218.0
+          },
+          {
+            "start": 218.0,
+            "end": 231.0
+          },
+          {
+            "start": 231.0,
+            "end": 244.0
+          },
+          {
+            "start": 244.0,
+            "end": 257.0
+          },
+          {
+            "start": 257.0,
+            "end": 270.0
+          },
+          {
+            "start": 270.0,
+            "end": 283.0
+          },
+          {
+            "start": 283.0,
+            "end": 296.0
+          },
+          {
+            "start": 296.0,
+            "end": 309.0
+          },
+          {
+            "start": 309.0,
+            "end": 322.0
+          },
+          {
+            "start": 322.0,
+            "end": 335.0
+          },
+          {
+            "start": 335.0,
+            "end": 348.0
+          },
+          {
+            "start": 348.0,
+            "end": 1.0
+          },
+          {
+            "start": 1.0,
+            "end": 14.0
+          },
+          {
+            "start": 14.0,
+            "end": 27.0
+          },
+          {
+            "start": 27.0,
+            "end": 40.0
+          }
+        ]
+      },
+      "range": [
+        0,
+        100
+      ],
+      "note": "segments 0-9 white, 10-19 red; value is blend door %"
+    },
+    "bright": {
+      "value_box": {
+        "x": 40,
+        "y": 96,
+        "w": 160,
+        "h": 48
+      },
+      "value_cap_px": 32,
+      "ring": {
+        "radius_outer": 113,
+        "width": 11,
+        "segments": [
+          {
+            "start": 140.0,
+            "end": 153.0
+          },
+          {
+            "start": 153.0,
+            "end": 166.0
+          },
+          {
+            "start": 166.0,
+            "end": 179.0
+          },
+          {
+            "start": 179.0,
+            "end": 192.0
+          },
+          {
+            "start": 192.0,
+            "end": 205.0
+          },
+          {
+            "start": 205.0,
+            "end": 218.0
+          },
+          {
+            "start": 218.0,
+            "end": 231.0
+          },
+          {
+            "start": 231.0,
+            "end": 244.0
+          },
+          {
+            "start": 244.0,
+            "end": 257.0
+          },
+          {
+            "start": 257.0,
+            "end": 270.0
+          },
+          {
+            "start": 270.0,
+            "end": 283.0
+          },
+          {
+            "start": 283.0,
+            "end": 296.0
+          },
+          {
+            "start": 296.0,
+            "end": 309.0
+          },
+          {
+            "start": 309.0,
+            "end": 322.0
+          },
+          {
+            "start": 322.0,
+            "end": 335.0
+          },
+          {
+            "start": 335.0,
+            "end": 348.0
+          },
+          {
+            "start": 348.0,
+            "end": 1.0
+          },
+          {
+            "start": 1.0,
+            "end": 14.0
+          },
+          {
+            "start": 14.0,
+            "end": 27.0
+          },
+          {
+            "start": 27.0,
+            "end": 40.0
+          }
+        ]
+      },
+      "range": [
+        5,
+        100
+      ],
+      "unit": "%"
+    }
+  },
+  "rec": {
+    "timer_box": {
+      "x": 60,
+      "y": 178,
+      "w": 120,
+      "h": 16
+    },
+    "timer_cap_px": 10,
+    "note": "LVGL draws elapsed time mm:ss under STOP while recording"
+  }
+}

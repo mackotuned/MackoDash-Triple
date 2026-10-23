@@ -1,0 +1,229 @@
+{
+  "tach": {
+    "size": [
+      800,
+      800
+    ],
+    "arc": {
+      "center": [
+        400,
+        400
+      ],
+      "radius_mid": 338,
+      "width": 26,
+      "obj_size": 702,
+      "bg_start": 135.0,
+      "bg_end": 45.0,
+      "mode": "NORMAL",
+      "range": [
+        0,
+        9000
+      ]
+    },
+    "redline_from": 8000,
+    "value_box": {
+      "x": 230,
+      "y": 326,
+      "w": 340,
+      "h": 128
+    },
+    "value_digit_px": 104,
+    "indicator_color": "#5EC8F2",
+    "redline_color": "#FF564A"
+  },
+  "speedo": {
+    "size": [
+      480,
+      480
+    ],
+    "arc": {
+      "center": [
+        240,
+        240
+      ],
+      "radius_mid": 204,
+      "width": 16,
+      "obj_size": 424,
+      "bg_start": 135.0,
+      "bg_end": 45.0,
+      "mode": "NORMAL",
+      "range": [
+        0,
+        160
+      ]
+    },
+    "value_box": {
+      "x": 140,
+      "y": 186,
+      "w": 200,
+      "h": 92
+    },
+    "value_digit_px": 76,
+    "indicator_color": "#5EC8F2"
+  },
+  "side": {
+    "size": [
+      480,
+      480
+    ],
+    "fuel_arc": {
+      "center": [
+        240,
+        240
+      ],
+      "radius_mid": 218,
+      "width": 12,
+      "obj_size": 448,
+      "bg_start": 130.0,
+      "bg_end": 230.0,
+      "mode": "NORMAL",
+      "range": [
+        0,
+        100
+      ]
+    },
+    "water_arc": {
+      "center": [
+        240,
+        240
+      ],
+      "radius_mid": 218,
+      "width": 12,
+      "obj_size": 448,
+      "bg_start": 310.0,
+      "bg_end": 50.0,
+      "mode": "REVERSE",
+      "range": [
+        0,
+        100
+      ],
+      "mapping": "60F->0, 190F->50 (middle tick), 225F->100; warn (red) above 80 = ~211F"
+    },
+    "boost_box": {
+      "x": 140,
+      "y": 164,
+      "w": 200,
+      "h": 76
+    },
+    "boost_digit_px": 54,
+    "iat_box": {
+      "x": 122,
+      "y": 296,
+      "w": 108,
+      "h": 40
+    },
+    "battery_box": {
+      "x": 250,
+      "y": 296,
+      "w": 108,
+      "h": 40
+    },
+    "small_digit_px": 28
+  },
+  "air": {
+    "size": [
+      480,
+      480
+    ],
+    "tank_box": {
+      "x": 160,
+      "y": 210,
+      "w": 160,
+      "h": 58
+    },
+    "tank_digit_px": 44,
+    "corner_boxes": {
+      "fl": {
+        "x": 92,
+        "y": 130,
+        "w": 112,
+        "h": 46
+      },
+      "fr": {
+        "x": 276,
+        "y": 130,
+        "w": 112,
+        "h": 46
+      },
+      "rl": {
+        "x": 92,
+        "y": 298,
+        "w": 112,
+        "h": 46
+      },
+      "rr": {
+        "x": 276,
+        "y": 298,
+        "w": 112,
+        "h": 46
+      }
+    },
+    "corner_digit_px": 30,
+    "corner_arcs": {
+      "fl": {
+        "center": [
+          240,
+          240
+        ],
+        "radius_mid": 216,
+        "width": 12,
+        "obj_size": 444,
+        "bg_start": 192.0,
+        "bg_end": 256.0,
+        "mode": "NORMAL",
+        "range": [
+          0,
+          150
+        ]
+      },
+      "fr": {
+        "center": [
+          240,
+          240
+        ],
+        "radius_mid": 216,
+        "width": 12,
+        "obj_size": 444,
+        "bg_start": 284.0,
+        "bg_end": 348.0,
+        "mode": "REVERSE",
+        "range": [
+          0,
+          150
+        ]
+      },
+      "rr": {
+        "center": [
+          240,
+          240
+        ],
+        "radius_mid": 216,
+        "width": 12,
+        "obj_size": 444,
+        "bg_start": 12.0,
+        "bg_end": 76.0,
+        "mode": "NORMAL",
+        "range": [
+          0,
+          150
+        ]
+      },
+      "rl": {
+        "center": [
+          240,
+          240
+        ],
+        "radius_mid": 216,
+        "width": 12,
+        "obj_size": 444,
+        "bg_start": 104.0,
+        "bg_end": 168.0,
+        "mode": "REVERSE",
+        "range": [
+          0,
+          150
+        ]
+      }
+    }
+  }
+}
