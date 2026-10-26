@@ -1,5 +1,6 @@
 #include "climate_link.h"
 #include "cluster_board_config.h"
+#include "cluster_ota.h"
 #include "cluster_protocol.h"
 #include "cluster_secrets.h"
 #include "cluster_wireless.h"
@@ -123,6 +124,22 @@ static void handle_message(const cluster_frame_view_t *view)
         }
         break;
     }
+    case CLUSTER_MSG_OTA_OFFER: {
+        /* Climate node updates come through here: the node joins the
+         * network just long enough to download its image. */
+        cluster_ota_offer_t offer;
+        if (cluster_ota_offer_decode(view->payload, view->payload_size,
+                                     &offer) != CLUSTER_PROTOCOL_OK) {
+            break;
+        }
+        if (offer.target == CLUSTER_OTA_LEFT) {
+            ESP_ERROR_CHECK_WITHOUT_ABORT(cluster_ota_start(CLUSTER_OTA_LEFT));
+        } else if (offer.target == CLUSTER_OTA_CLIMATE) {
+            ESP_ERROR_CHECK_WITHOUT_ABORT(
+                climate_link_request_update(offer.image_size));
+        }
+        break;
+    }
     case CLUSTER_MSG_CLIMATE_COMMAND: {
         cluster_climate_command_t command;
         if (cluster_climate_command_decode(view->payload, view->payload_size,
@@ -165,6 +182,8 @@ void app_main(void)
         /* The climate link needs the station running on the cluster channel. */
         if (!climate_started && cluster_wireless_ready()) {
             climate_started = true;
+            /* Rejoining the network proves a new firmware; keep it. */
+            cluster_ota_mark_valid();
             ESP_ERROR_CHECK_WITHOUT_ABORT(
                 climate_link_start(climate_state_changed, NULL));
         }

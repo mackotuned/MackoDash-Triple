@@ -1,8 +1,9 @@
 idf_component_register(
     SRCS "main.c" "air_link.c" "air_overlay.c" "center_display.c" "center_link.c"
-         "center_ui.c" "log_overlay.c" "settings_service.c" "simulation.c"
+         "center_ui.c" "log_overlay.c" "ota_service.c" "settings_service.c"
+         "simulation.c"
     INCLUDE_DIRS "."
-    REQUIRES cluster_board_config cluster_protocol cluster_secrets cluster_wireless dns_server esp_mm hondata_can hondata_logger vehicle_data settings_schema odometer esp_timer espressif__esp_lv_decoder esp_event esp_netif esp_wifi esp_http_server nvs_flash json espressif__esp_hosted espressif__esp_wifi_remote
+    REQUIRES app_update cluster_board_config cluster_ota cluster_protocol cluster_secrets cluster_wireless dns_server esp_mm hondata_can hondata_logger vehicle_data settings_schema odometer esp_timer espressif__esp_lv_decoder esp_event esp_netif esp_wifi esp_http_server nvs_flash json espressif__esp_hosted espressif__esp_wifi_remote
     EMBED_FILES "assets/tach_ek_800.png" "phone_ui.html"
         "assets/web/apple_touch_icon.png"
         "assets/themes/graphite/graphite_tach_ek_800.png"

@@ -30,9 +30,6 @@ uint32_t side_channel_color(const cluster_vehicle_fast_t *vehicle,
  * false when the channel has no live data. */
 bool side_channel_value_tenths(const cluster_vehicle_fast_t *vehicle,
                                uint8_t channel, int32_t *value);
-/* Plot range for a channel, in the same tenths. */
-void side_channel_range_tenths(uint8_t channel, int32_t *minimum,
-                               int32_t *maximum);
 
 /* ---- Look ---------------------------------------------------------------- */
 
@@ -43,8 +40,7 @@ typedef struct {
     uint32_t text;
     uint32_t dim;
     uint32_t accent;  /* classic red, graphite blue */
-    uint32_t accent2; /* second trace / secondary highlight */
-    uint32_t grid;
+    uint32_t accent2; /* secondary highlight */
 } side_palette_t;
 
 const side_palette_t *side_palette(bool graphite);
@@ -71,8 +67,6 @@ typedef struct {
 extern const side_page_ops_t data_page_ops;
 /* Six configurable values in a 2x3 grid. */
 extern const side_page_ops_t gauges_page_ops;
-/* Two configurable values plotted over the last 20 seconds. */
-extern const side_page_ops_t trends_page_ops;
 /* Session maxima with an RPM peak ring; hold to reset. */
 extern const side_page_ops_t peaks_page_ops;
 /* 0-30, 0-60, 1/8 and 1/4 mile timer; hold to reset. */

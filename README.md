@@ -54,9 +54,11 @@ battery-voltage readout.
 - `components/vehicle_data`: normalized cross-device vehicle state.
 - `components/settings_schema`: shared display settings and left telemetry selections.
 - `components/side_display`: Waveshare 2.8C panel bring-up and the speedometer gauge.
-- `components/side_pages`: the eight pages both side displays share (data, gauges,
-  trends, peaks, timer, speedometer, Air Ride, climate) and their swipe navigation.
+- `components/side_pages`: the seven pages both side displays share (data, gauges,
+  peaks, timer, speedometer, Air Ride, climate) and their swipe navigation.
 - `components/dash_fonts`: Microgramma digit fonts shared by the side displays.
+- `components/cluster_ota` and `tools/ota_flash.py`: over-the-air updates for every
+  board through the P4 ([docs/OTA.md](docs/OTA.md)).
 - `ui-mockups/civic_tach`: retained display artwork, layout metadata, notes,
   previews, and editable Python generators.
 - [`ui-mockups/knob`](ui-mockups/knob/KNOB_UI_HANDOFF.md): retained rotary UI

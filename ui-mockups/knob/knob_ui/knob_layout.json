@@ -161,32 +161,28 @@
           "image": "screen_source_1_gauges"
         },
         {
-          "id": "trends",
-          "image": "screen_source_2_trends"
-        },
-        {
           "id": "peaks",
-          "image": "screen_source_3_peaks"
+          "image": "screen_source_2_peaks"
         },
         {
           "id": "timer",
-          "image": "screen_source_4_timer"
+          "image": "screen_source_3_timer"
         },
         {
           "id": "speedo",
-          "image": "screen_source_5_speedo"
+          "image": "screen_source_4_speedo"
         },
         {
           "id": "air",
-          "image": "screen_source_6_air"
+          "image": "screen_source_5_air"
         },
         {
           "id": "climate",
-          "image": "screen_source_7_climate"
+          "image": "screen_source_6_climate"
         },
         {
           "id": "back",
-          "image": "screen_source_8_back"
+          "image": "screen_source_7_back"
         }
       ],
       "center": [
@@ -217,32 +213,28 @@
           "image": "screen_source_1_gauges"
         },
         {
-          "id": "trends",
-          "image": "screen_source_2_trends"
-        },
-        {
           "id": "peaks",
-          "image": "screen_source_3_peaks"
+          "image": "screen_source_2_peaks"
         },
         {
           "id": "timer",
-          "image": "screen_source_4_timer"
+          "image": "screen_source_3_timer"
         },
         {
           "id": "speedo",
-          "image": "screen_source_5_speedo"
+          "image": "screen_source_4_speedo"
         },
         {
           "id": "air",
-          "image": "screen_source_6_air"
+          "image": "screen_source_5_air"
         },
         {
           "id": "climate",
-          "image": "screen_source_7_climate"
+          "image": "screen_source_6_climate"
         },
         {
           "id": "back",
-          "image": "screen_source_8_back"
+          "image": "screen_source_7_back"
         }
       ]
     }

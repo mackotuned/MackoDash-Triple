@@ -1,5 +1,6 @@
 from pathlib import Path
 import shutil
+import zlib
 
 from PIL import Image
 
@@ -20,6 +21,14 @@ def rgb565(source: Path, destination: Path, size: tuple[int, int]) -> None:
         output[offset + 1] = value & 0xFF
         offset += 2
     destination.write_bytes(output)
+
+
+def knob_page(source: Path, destination: Path) -> None:
+    """Knob pages ship zlib-compressed; the knob inflates each one to draw it."""
+    raw = destination.with_suffix(".raw")
+    rgb565(source, raw, (240, 240))
+    destination.write_bytes(zlib.compress(raw.read_bytes(), 9))
+    raw.unlink()
 
 
 def copy_png(source: Path, destination: Path) -> None:
@@ -52,13 +61,13 @@ def main() -> None:
         rgb565(source, ROOT / "components" / "side_pages" / "assets" / "airctl" / f"graphite_{name}.bin", image.size)
 
     knob_source = GRAPHITE / "knob_ui"
-    knob_destination = ROOT / "apps" / "knob_s3" / "main" / "assets" / "rgb565"
-    classic_names = {path.stem for path in knob_destination.glob("*.bin") if not path.stem.startswith("graphite_")}
+    knob_destination = ROOT / "apps" / "knob_s3" / "main" / "assets" / "rgb565z"
+    classic_names = {path.stem for path in knob_destination.glob("*.z") if not path.stem.startswith("graphite_")}
     missing = sorted(name for name in classic_names if not (knob_source / f"{name}.png").exists())
     if missing:
         raise FileNotFoundError(f"Graphite Knob assets missing: {', '.join(missing)}")
     for name in sorted(classic_names):
-        rgb565(knob_source / f"{name}.png", knob_destination / f"graphite_{name}.bin", (240, 240))
+        knob_page(knob_source / f"{name}.png", knob_destination / f"graphite_{name}.z")
 
     print(f"Exported Graphite runtime assets for {len(classic_names)} Knob pages")
 

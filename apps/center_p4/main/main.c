@@ -3,6 +3,7 @@
 #include "center_display.h"
 #include "center_link.h"
 #include "cluster_board_config.h"
+#include "cluster_ota.h"
 #include "cluster_protocol.h"
 #include "cluster_wireless.h"
 #include "esp_check.h"
@@ -128,6 +129,8 @@ void app_main(void)
     ESP_LOGI(TAG, "Hondata CAN: RX GPIO%d, TX GPIO%d, automatic bitrate scan",
              CLUSTER_CENTER_CAN_RX_GPIO, CLUSTER_CENTER_CAN_TX_GPIO);
     center_link_start();
+    /* Display, CAN and the network all started: keep this firmware. */
+    cluster_ota_mark_valid();
 
     uint32_t last_vehicle_fast_ms = 0U;
     uint32_t last_status_ms = 0U;

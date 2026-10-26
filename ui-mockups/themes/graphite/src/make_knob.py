@@ -181,14 +181,6 @@ def ic_gauge(p, red_zone=False, ticks=9, ink="w"):
     p.dot(0, 4, 7, ink)
 
 
-def ic_trend(p):
-    """Chart axes with a live trace; the newest point is highlighted."""
-    p.line([(-40, -38), (-40, 30), (40, 30)], 5)
-    trace = [(-32, 12), (-17, -6), (-3, 6), (13, -22), (30, -10)]
-    p.line(trace, 6, "r")
-    p.dot(30, -10, 7, "r")
-
-
 def ic_peak(p):
     """A summit with a flag on top."""
     p.line([(-42, 30), (-14, -16), (0, 4), (16, -32), (42, 30)], 6)
@@ -357,7 +349,6 @@ ICON_FUNCS = {
     "speedo": lambda L, p, *a: ic_gauge(p, False, 11),
     "data": lambda L, p, *a: ic_thermo(p, 0.5),
     "gauges": lambda L, p, *a: ic_grid(p),
-    "trends": lambda L, p, *a: ic_trend(p),
     "peaks": lambda L, p, *a: ic_peak(p),
     "timer": lambda L, p, *a: ic_stopwatch(p),
     "car_all": lambda L, p, *a: ic_car(p, ("fl", "fr", "rl", "rr")),
@@ -497,14 +488,14 @@ def main():
 
     source_menus = {
         "left": [("data", "data", "DATA"), ("gauges", "gauges", "GAUGES"),
-                 ("trends", "trends", "TRENDS"), ("peaks", "peaks", "PEAKS"),
+                 ("peaks", "peaks", "PEAKS"),
                  ("timer", "timer", "TIMER"), ("speedo", "speedo", "SPEEDO"),
                  ("air", "air", "AIR RIDE"), ("climate", "climate", "CLIMATE"),
                  ("back", "back", "BACK")],
         "center": [("tach", "tach", "TACH"), ("air", "air", "AIR RIDE"),
                    ("logs", "logs", "LOGS"), ("back", "back", "BACK")],
         "right": [("data", "data", "DATA"), ("gauges", "gauges", "GAUGES"),
-                  ("trends", "trends", "TRENDS"), ("peaks", "peaks", "PEAKS"),
+                  ("peaks", "peaks", "PEAKS"),
                   ("timer", "timer", "TIMER"), ("speedo", "speedo", "SPEEDO"),
                   ("air", "air", "AIR RIDE"), ("climate", "climate", "CLIMATE"),
                   ("back", "back", "BACK")],

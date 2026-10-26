@@ -10,9 +10,9 @@
 extern "C" {
 #endif
 
-/* The eight pages every side display offers. Swiping left or right cycles
- * DATA -> GAUGES -> TRENDS -> PEAKS -> TIMER -> SPEEDOMETER -> AIR RIDE ->
- * CLIMATE; the knob can select any of them. */
+/* The seven pages every side display offers. Swiping left or right cycles
+ * DATA -> GAUGES -> PEAKS -> TIMER -> SPEEDOMETER -> AIR RIDE -> CLIMATE;
+ * the knob can select any of them. */
 
 enum {
     SIDE_AIR_FRONT_LEFT,

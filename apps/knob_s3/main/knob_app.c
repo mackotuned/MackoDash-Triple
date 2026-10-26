@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "cluster_board_config.h"
+#include "cluster_ota.h"
 #include "cluster_protocol.h"
 #include "cluster_wireless.h"
 #include "settings_schema.h"
@@ -21,6 +22,7 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
+#include "miniz.h"
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
@@ -53,12 +55,20 @@
     ((uint16_t)((((red) & 0xf8) << 8) | (((green) & 0xfc) << 3) | ((blue) >> 3)))
 
 /* Every page bitmap exists in both themes: name.bin and graphite_name.bin. */
+/* Page bitmaps are zlib-compressed RGB565, in both themes:
+ * name.z and graphite_name.z. */
 #define ASSET(name) \
     extern const uint8_t asset_##name##_start[] \
-        asm("_binary_" #name "_bin_start"); \
+        asm("_binary_" #name "_z_start"); \
+    extern const uint8_t asset_##name##_end[] \
+        asm("_binary_" #name "_z_end"); \
     extern const uint8_t graphite_asset_##name##_start[] \
-        asm("_binary_graphite_" #name "_bin_start")
-#define THEMED(name) {asset_##name##_start, graphite_asset_##name##_start}
+        asm("_binary_graphite_" #name "_z_start"); \
+    extern const uint8_t graphite_asset_##name##_end[] \
+        asm("_binary_graphite_" #name "_z_end")
+#define THEMED(name) \
+    {{asset_##name##_start, asset_##name##_end}, \
+     {graphite_asset_##name##_start, graphite_asset_##name##_end}}
 
 ASSET(main_0_screen); ASSET(main_1_rec); ASSET(main_2_air);
 ASSET(main_3_climate); ASSET(main_4_logs); ASSET(main_5_bright);
@@ -69,10 +79,9 @@ ASSET(screen_source_0_tach); ASSET(screen_source_1_air);
 ASSET(screen_source_2_logs); ASSET(screen_source_3_back);
 /* Side display picker, in swipe order. */
 ASSET(screen_source_0_data); ASSET(screen_source_1_gauges);
-ASSET(screen_source_2_trends); ASSET(screen_source_3_peaks);
-ASSET(screen_source_4_timer); ASSET(screen_source_5_speedo);
-ASSET(screen_source_6_air); ASSET(screen_source_7_climate);
-ASSET(screen_source_8_back);
+ASSET(screen_source_2_peaks); ASSET(screen_source_3_timer);
+ASSET(screen_source_4_speedo); ASSET(screen_source_5_air);
+ASSET(screen_source_6_climate); ASSET(screen_source_7_back);
 ASSET(rec_idle); ASSET(rec_active);
 ASSET(air_0_all); ASSET(air_1_front); ASSET(air_2_rear); ASSET(air_3_fl);
 ASSET(air_4_fr); ASSET(air_5_rl); ASSET(air_6_rr); ASSET(air_7_back);
@@ -86,7 +95,11 @@ ASSET(mode_3_feetdef); ASSET(mode_4_defrost); ASSET(mode_5_back);
 ASSET(logs_0_left); ASSET(logs_1_center); ASSET(logs_2_right);
 ASSET(logs_3_back); ASSET(adjust_bright);
 
-typedef const uint8_t *themed_asset_t[CLUSTER_THEME_COUNT];
+typedef struct {
+    const uint8_t *start;
+    const uint8_t *end;
+} asset_t;
+typedef asset_t themed_asset_t[CLUSTER_THEME_COUNT];
 
 typedef enum {
     PAGE_MAIN,
@@ -149,7 +162,7 @@ static const themed_asset_t SCREEN_TARGET_ASSETS[4] = {
     THEMED(screen_target_2_right), THEMED(screen_target_3_back),
 };
 /* "Show on screen" menus: the views each display offers, then BACK. */
-#define SCREEN_SOURCE_MAX_VIEWS 8
+#define SCREEN_SOURCE_MAX_VIEWS 7
 typedef struct {
     int view_count;
     cluster_display_view_t views[SCREEN_SOURCE_MAX_VIEWS];
@@ -158,16 +171,14 @@ typedef struct {
 
 /* Same order as swiping on the side displays. */
 #define SIDE_SOURCE_MENU {                                                  \
-    .view_count = 8,                                                        \
-    .views = {CLUSTER_VIEW_DATA, CLUSTER_VIEW_GAUGES, CLUSTER_VIEW_TRENDS,  \
-              CLUSTER_VIEW_PEAKS, CLUSTER_VIEW_TIMER,                       \
-              CLUSTER_VIEW_SPEEDOMETER, CLUSTER_VIEW_AIR_RIDE,              \
-              CLUSTER_VIEW_CLIMATE},                                        \
+    .view_count = 7,                                                        \
+    .views = {CLUSTER_VIEW_DATA, CLUSTER_VIEW_GAUGES, CLUSTER_VIEW_PEAKS,   \
+              CLUSTER_VIEW_TIMER, CLUSTER_VIEW_SPEEDOMETER,                 \
+              CLUSTER_VIEW_AIR_RIDE, CLUSTER_VIEW_CLIMATE},                 \
     .assets = {THEMED(screen_source_0_data), THEMED(screen_source_1_gauges), \
-               THEMED(screen_source_2_trends), THEMED(screen_source_3_peaks), \
-               THEMED(screen_source_4_timer), THEMED(screen_source_5_speedo), \
-               THEMED(screen_source_6_air), THEMED(screen_source_7_climate), \
-               THEMED(screen_source_8_back)},                               \
+               THEMED(screen_source_2_peaks), THEMED(screen_source_3_timer), \
+               THEMED(screen_source_4_speedo), THEMED(screen_source_5_air),  \
+               THEMED(screen_source_6_climate), THEMED(screen_source_7_back)}, \
 }
 static const screen_source_menu_t SCREEN_SOURCE_MENUS[CLUSTER_DISPLAY_COUNT] = {
     [CLUSTER_DISPLAY_LEFT] = SIDE_SOURCE_MENU,
@@ -677,27 +688,27 @@ static void press_ui(void)
     if (send) send_command(code, target, value, CLUSTER_KNOB_COMMAND_CONFIRM);
 }
 
-static const uint8_t *background_for(const knob_state_t *current)
+static const asset_t *background_for(const knob_state_t *current)
 {
     const size_t theme = current->theme == CLUSTER_THEME_GRAPHITE
         ? CLUSTER_THEME_GRAPHITE : CLUSTER_THEME_CLASSIC;
     const int selection = current->selection;
     switch (current->page) {
-    case PAGE_SCREEN_TARGET: return SCREEN_TARGET_ASSETS[selection][theme];
+    case PAGE_SCREEN_TARGET: return &SCREEN_TARGET_ASSETS[selection][theme];
     case PAGE_SCREEN_SOURCE:
-        return SCREEN_SOURCE_MENUS[current->screen_target].assets[selection]
+        return &SCREEN_SOURCE_MENUS[current->screen_target].assets[selection]
             [theme];
-    case PAGE_RECORD: return RECORD_ASSETS[current->recording ? 1 : 0][theme];
-    case PAGE_AIR: return AIR_ASSETS[selection][theme];
-    case PAGE_AIR_ADJUST: return AIR_ADJUST_ASSETS[current->adjust_target][theme];
-    case PAGE_CLIMATE: return CLIMATE_ASSETS[selection][theme];
-    case PAGE_FAN_ADJUST: return FAN_ADJUST_ASSET[theme];
-    case PAGE_TEMP_ADJUST: return TEMP_ADJUST_ASSET[theme];
-    case PAGE_MODE: return MODE_ASSETS[selection][theme];
-    case PAGE_LOGS: return LOG_ASSETS[selection][theme];
-    case PAGE_BRIGHT_ADJUST: return BRIGHT_ADJUST_ASSET[theme];
-    case PAGE_MAIN: return MAIN_ASSETS[selection][theme];
-    default: return MAIN_ASSETS[0][theme];
+    case PAGE_RECORD: return &RECORD_ASSETS[current->recording ? 1 : 0][theme];
+    case PAGE_AIR: return &AIR_ASSETS[selection][theme];
+    case PAGE_AIR_ADJUST: return &AIR_ADJUST_ASSETS[current->adjust_target][theme];
+    case PAGE_CLIMATE: return &CLIMATE_ASSETS[selection][theme];
+    case PAGE_FAN_ADJUST: return &FAN_ADJUST_ASSET[theme];
+    case PAGE_TEMP_ADJUST: return &TEMP_ADJUST_ASSET[theme];
+    case PAGE_MODE: return &MODE_ASSETS[selection][theme];
+    case PAGE_LOGS: return &LOG_ASSETS[selection][theme];
+    case PAGE_BRIGHT_ADJUST: return &BRIGHT_ADJUST_ASSET[theme];
+    case PAGE_MAIN: return &MAIN_ASSETS[selection][theme];
+    default: return &MAIN_ASSETS[0][theme];
     }
 }
 
@@ -707,7 +718,13 @@ static void render(void)
     xSemaphoreTake(state_mutex, portMAX_DELAY);
     current = state;
     xSemaphoreGive(state_mutex);
-    memcpy(framebuffer, background_for(&current), LCD_BYTES);
+    /* Inflating a page takes a few milliseconds. */
+    const asset_t *background = background_for(&current);
+    if (tinfl_decompress_mem_to_mem(framebuffer, LCD_BYTES, background->start,
+                                    (size_t)(background->end - background->start),
+                                    TINFL_FLAG_PARSE_ZLIB_HEADER) != LCD_BYTES) {
+        memset(framebuffer, 0, LCD_BYTES);
+    }
     if (is_adjust_page(current.page)) {
         char value_text[8];
         if (current.page == PAGE_FAN_ADJUST && current.value == 0) {
@@ -1008,6 +1025,15 @@ static void handle_message(const cluster_frame_view_t *view)
         xSemaphoreGive(state_mutex);
         break;
     }
+    case CLUSTER_MSG_OTA_OFFER: {
+        cluster_ota_offer_t offer;
+        if (cluster_ota_offer_decode(view->payload, view->payload_size,
+                                     &offer) == CLUSTER_PROTOCOL_OK &&
+            offer.target == CLUSTER_OTA_KNOB) {
+            ESP_ERROR_CHECK_WITHOUT_ABORT(cluster_ota_start(CLUSTER_OTA_KNOB));
+        }
+        break;
+    }
     case CLUSTER_MSG_SETTINGS: {
         cluster_left_settings_t settings;
         if (cluster_left_settings_decode(view->payload, view->payload_size,
@@ -1028,7 +1054,13 @@ static void network_task(void *argument)
 {
     (void)argument;
     uint8_t frame[CLUSTER_PROTOCOL_MAX_FRAME_SIZE];
+    bool firmware_confirmed = false;
     for (;;) {
+        /* Rejoining the network proves a new firmware; keep it. */
+        if (!firmware_confirmed && cluster_wireless_ready()) {
+            cluster_ota_mark_valid();
+            firmware_confirmed = true;
+        }
         size_t frame_size = 0;
         cluster_frame_view_t view;
         if (cluster_wireless_receive_message(frame, sizeof(frame), &frame_size,
@@ -1127,5 +1159,6 @@ void app_main(void)
     ESP_ERROR_CHECK(xTaskCreate(input_task, "knob_input", 4096, NULL, 5, NULL) == pdPASS ? ESP_OK : ESP_FAIL);
     ESP_ERROR_CHECK(xTaskCreate(touch_task, "knob_touch", 4096, NULL, 4, NULL) == pdPASS ? ESP_OK : ESP_FAIL);
     ESP_ERROR_CHECK(xTaskCreate(network_task, "knob_network", 4096, NULL, 5, NULL) == pdPASS ? ESP_OK : ESP_FAIL);
-    ESP_ERROR_CHECK(xTaskCreate(ui_task, "knob_ui", 4096, NULL, 3, NULL) == pdPASS ? ESP_OK : ESP_FAIL);
+    /* The ROM inflater keeps its ~11 KB state on the stack. */
+    ESP_ERROR_CHECK(xTaskCreate(ui_task, "knob_ui", 16384, NULL, 3, NULL) == pdPASS ? ESP_OK : ESP_FAIL);
 }

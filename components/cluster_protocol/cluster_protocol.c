@@ -349,10 +349,6 @@ cluster_protocol_result_t cluster_left_settings_encode(
            sizeof(settings->left_gauge_channels));
     memcpy(&payload[51], settings->right_gauge_channels,
            sizeof(settings->right_gauge_channels));
-    memcpy(&payload[57], settings->left_trend_channels,
-           sizeof(settings->left_trend_channels));
-    memcpy(&payload[59], settings->right_trend_channels,
-           sizeof(settings->right_trend_channels));
     return CLUSTER_PROTOCOL_OK;
 }
 
@@ -397,10 +393,6 @@ cluster_protocol_result_t cluster_left_settings_decode(
            sizeof(settings->left_gauge_channels));
     memcpy(settings->right_gauge_channels, &payload[51],
            sizeof(settings->right_gauge_channels));
-    memcpy(settings->left_trend_channels, &payload[57],
-           sizeof(settings->left_trend_channels));
-    memcpy(settings->right_trend_channels, &payload[59],
-           sizeof(settings->right_trend_channels));
     return CLUSTER_PROTOCOL_OK;
 }
 
@@ -668,4 +660,41 @@ cluster_air_ride_command_code_t cluster_air_target_command(uint8_t target,
     };
     if (target >= CLUSTER_AIR_TARGET_COUNT) return CLUSTER_AIR_RIDE_RELEASE;
     return commands[target][raise ? 1 : 0];
+}
+
+cluster_protocol_result_t cluster_ota_offer_encode(
+    const cluster_ota_offer_t *offer,
+    uint8_t *payload,
+    size_t payload_capacity)
+{
+    if (!offer || !payload || offer->target >= CLUSTER_OTA_TARGET_COUNT) {
+        return CLUSTER_PROTOCOL_INVALID_ARGUMENT;
+    }
+    if (payload_capacity < CLUSTER_OTA_OFFER_PAYLOAD_SIZE) {
+        return CLUSTER_PROTOCOL_BUFFER_TOO_SMALL;
+    }
+    payload[0] = CLUSTER_OTA_OFFER_PAYLOAD_VERSION;
+    payload[1] = (uint8_t)offer->target;
+    write_u32_le(&payload[2], offer->image_size);
+    return CLUSTER_PROTOCOL_OK;
+}
+
+cluster_protocol_result_t cluster_ota_offer_decode(
+    const uint8_t *payload,
+    size_t payload_size,
+    cluster_ota_offer_t *offer)
+{
+    if (!payload || !offer) return CLUSTER_PROTOCOL_INVALID_ARGUMENT;
+    if (payload_size != CLUSTER_OTA_OFFER_PAYLOAD_SIZE) {
+        return CLUSTER_PROTOCOL_BAD_LENGTH;
+    }
+    if (payload[0] != CLUSTER_OTA_OFFER_PAYLOAD_VERSION) {
+        return CLUSTER_PROTOCOL_BAD_VERSION;
+    }
+    if (payload[1] >= CLUSTER_OTA_TARGET_COUNT) {
+        return CLUSTER_PROTOCOL_INVALID_ARGUMENT;
+    }
+    offer->target = (cluster_ota_target_t)payload[1];
+    offer->image_size = read_u32_le(&payload[2]);
+    return CLUSTER_PROTOCOL_OK;
 }

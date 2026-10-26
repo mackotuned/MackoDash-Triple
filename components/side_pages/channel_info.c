@@ -226,46 +226,17 @@ bool side_channel_value_tenths(const cluster_vehicle_fast_t *vehicle,
     return true;
 }
 
-void side_channel_range_tenths(uint8_t channel, int32_t *minimum,
-                               int32_t *maximum)
-{
-    static const int16_t ranges[VEHICLE_DATA_COUNT][2] = {
-        [VEHICLE_DATA_RPM] = {0, 9000},       /* x10 below */
-        [VEHICLE_DATA_SPEED] = {0, 1600},
-        [VEHICLE_DATA_BOOST] = {-150, 300},
-        [VEHICLE_DATA_COOLANT_TEMP] = {1000, 2600},
-        [VEHICLE_DATA_INTAKE_TEMP] = {400, 2000},
-        [VEHICLE_DATA_AFR] = {100, 200},
-        [VEHICLE_DATA_OIL_PRESSURE] = {0, 1000},
-        [VEHICLE_DATA_FUEL_PRESSURE] = {0, 800},
-        [VEHICLE_DATA_BATTERY] = {100, 160},
-        [VEHICLE_DATA_THROTTLE] = {0, 1000},
-        [VEHICLE_DATA_FUEL_LEVEL] = {0, 1000},
-        [VEHICLE_DATA_IGNITION] = {-100, 500},
-        [VEHICLE_DATA_ETHANOL] = {0, 1000},
-        [VEHICLE_DATA_KNOCK] = {0, 200},
-    };
-    if (channel >= VEHICLE_DATA_COUNT) {
-        *minimum = 0;
-        *maximum = 1000;
-        return;
-    }
-    const int32_t scale = channel == VEHICLE_DATA_RPM ? 10 : 1;
-    *minimum = ranges[channel][0] * scale;
-    *maximum = ranges[channel][1] * scale;
-}
-
 const side_palette_t *side_palette(bool graphite)
 {
     static const side_palette_t classic = {
         .background = 0x000000, .panel = 0x0C0C0D, .border = 0x2C2C2F,
         .text = 0xECECE7, .dim = 0x9A9A96, .accent = 0xE81E1E,
-        .accent2 = 0xEC5C28, .grid = 0x19191B,
+        .accent2 = 0xEC5C28,
     };
     static const side_palette_t graphite_palette = {
         .background = 0x0B0E11, .panel = 0x12171C, .border = 0x26323C,
         .text = 0xEEF0F2, .dim = 0x8A97A3, .accent = 0x5EC8F2,
-        .accent2 = 0xE8EDF2, .grid = 0x18212A,
+        .accent2 = 0xE8EDF2,
     };
     return graphite ? &graphite_palette : &classic;
 }

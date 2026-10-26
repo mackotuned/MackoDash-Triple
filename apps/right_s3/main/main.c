@@ -1,5 +1,6 @@
 #include "air_ride_gateway.h"
 #include "cluster_board_config.h"
+#include "cluster_ota.h"
 #include "cluster_protocol.h"
 #include "cluster_wireless.h"
 #include "esp_check.h"
@@ -187,6 +188,15 @@ static void handle_message(const cluster_frame_view_t *view)
         }
         break;
     }
+    case CLUSTER_MSG_OTA_OFFER: {
+        cluster_ota_offer_t offer;
+        if (cluster_ota_offer_decode(view->payload, view->payload_size,
+                                     &offer) == CLUSTER_PROTOCOL_OK &&
+            offer.target == CLUSTER_OTA_RIGHT) {
+            ESP_ERROR_CHECK_WITHOUT_ABORT(cluster_ota_start(CLUSTER_OTA_RIGHT));
+        }
+        break;
+    }
     default:
         break;
     }
@@ -216,8 +226,14 @@ void app_main(void)
     int64_t last_heartbeat_us = esp_timer_get_time();
     int64_t last_state_us = 0;
     bool center_online = false;
+    bool firmware_confirmed = false;
 
     for (;;) {
+        /* Rejoining the network proves a new firmware; keep it. */
+        if (!firmware_confirmed && cluster_wireless_ready()) {
+            cluster_ota_mark_valid();
+            firmware_confirmed = true;
+        }
         size_t frame_size = 0U;
         cluster_frame_view_t view;
         if (cluster_wireless_receive_message(frame, sizeof(frame), &frame_size,

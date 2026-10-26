@@ -60,34 +60,6 @@ def gauges(p):
     return img
 
 
-def trends(p):
-    img, d = base(p)
-    sm, mid = font(SANS, 14), font(MICRO, 35)
-    text(d, (240, 58), "TRENDS", sm, p["accent"], "mt")
-    text(d, (240, 76), "LAST 20 SECONDS", sm, p["dim"], "mt")
-    for cx, n, v, u, c in ((165, "BOOST", "12.4", "PSI", p["accent"]), (315, "AFR", "11.8", "AFR", p["accent2"])):
-        text(d, (cx, 106), n, sm, c, "mt")
-        text(d, (cx, 124), v, mid, p["text"], "mt")
-        text(d, (cx, 162), u, sm, p["dim"], "mt")
-    x0, y0, w, h = 70, 190, 340, 196
-    panel(d, p, x0, y0, w, h)
-    ix, iy, iw, ih = x0 + 12, y0 + 12, w - 24, h - 24
-    for k in range(1, 5):
-        yy = iy + ih * k / 5
-        d.line([ix * S, yy * S, (ix + iw) * S, yy * S], fill=rgb(p["grid"]), width=S)
-    for series, color in ((0, p["accent"]), (1, p["accent2"])):
-        pts = []
-        for i in range(100):
-            t = i / 99
-            if series == 0:
-                val = 0.25 + 0.6 * max(0, math.sin(t * 6.5 - 1.2)) ** 1.5
-            else:
-                val = 0.55 - 0.25 * max(0, math.sin(t * 6.5 - 1.0)) + 0.03 * math.sin(t * 40)
-            pts.append(((ix + iw * t) * S, (iy + ih * (1 - val)) * S))
-        d.line(pts, fill=rgb(color), width=3 * S, joint="curve")
-    return img
-
-
 def peaks(p):
     img, d = base(p)
     sm, big, small = font(SANS, 14), font(MICRO, 35), font(MICRO, 28)
@@ -134,7 +106,7 @@ def round_mask(img):
     return out.resize((480, 480), Image.LANCZOS)
 
 
-pages = [gauges, trends, peaks, timer]
+pages = [gauges, peaks, timer]
 sheet = Image.new("RGB", (len(pages) * 490 + 10, 2 * 490 + 10), (40, 40, 44))
 for row, name in enumerate(("classic", "graphite")):
     for col, page in enumerate(pages):

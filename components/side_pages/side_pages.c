@@ -17,7 +17,6 @@
 typedef enum {
     PAGE_DATA,
     PAGE_GAUGES,
-    PAGE_TRENDS,
     PAGE_PEAKS,
     PAGE_TIMER,
     PAGE_SPEEDOMETER,
@@ -29,7 +28,6 @@ typedef enum {
 static const side_page_ops_t *const data_pages[] = {
     [PAGE_DATA] = &data_page_ops,
     [PAGE_GAUGES] = &gauges_page_ops,
-    [PAGE_TRENDS] = &trends_page_ops,
     [PAGE_PEAKS] = &peaks_page_ops,
     [PAGE_TIMER] = &timer_page_ops,
 };
@@ -41,7 +39,6 @@ static const struct {
 } view_pages[] = {
     {CLUSTER_VIEW_DATA, PAGE_DATA},
     {CLUSTER_VIEW_GAUGES, PAGE_GAUGES},
-    {CLUSTER_VIEW_TRENDS, PAGE_TRENDS},
     {CLUSTER_VIEW_PEAKS, PAGE_PEAKS},
     {CLUSTER_VIEW_TIMER, PAGE_TIMER},
     {CLUSTER_VIEW_SPEEDOMETER, PAGE_SPEEDOMETER},
@@ -204,8 +201,8 @@ void side_pages_update_vehicle(const cluster_vehicle_fast_t *vehicle)
         vehicle_data_channel_valid(vehicle->valid_channels,
                                    VEHICLE_DATA_SPEED));
     if (side_display_lock(LOCK_TIMEOUT_MS) != ESP_OK) return;
-    /* Every data page keeps tracking (peaks, timer, trend history) even
-     * while another page is on screen. */
+    /* Every data page keeps tracking (peaks, timer) even while another
+     * page is on screen. */
     for (size_t index = 0; index < DATA_PAGE_COUNT; ++index) {
         data_pages[index]->update(vehicle);
     }

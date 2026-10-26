@@ -22,6 +22,7 @@
 #include "freertos/task.h"
 #include "nvs.h"
 #include "nvs_flash.h"
+#include "ota_service.h"
 
 #define SETTINGS_RECORD_MAGIC 0x4D445354UL
 #define SETTINGS_NAMESPACE "cluster"
@@ -284,12 +285,6 @@ static cJSON *settings_to_json(const cluster_settings_t *settings)
     JSON_ADD_ARRAY(screen_layout, "rightGaugeChannels",
                    settings->screen_layout.right_gauge_channels,
                    CLUSTER_GAUGE_SLOT_COUNT);
-    JSON_ADD_ARRAY(screen_layout, "leftTrendChannels",
-                   settings->screen_layout.left_trend_channels,
-                   CLUSTER_TREND_SLOT_COUNT);
-    JSON_ADD_ARRAY(screen_layout, "rightTrendChannels",
-                   settings->screen_layout.right_trend_channels,
-                   CLUSTER_TREND_SLOT_COUNT);
     cJSON_AddBoolToObject(screen_layout, "rightBatteryEnabled",
                           settings->screen_layout.right_battery_enabled);
     cJSON *simulation = cJSON_AddObjectToObject(root, "simulation");
@@ -412,12 +407,6 @@ static bool apply_patch(cluster_settings_t *settings, const char *key,
         {"screenLayout.rightGaugeChannels.",
          offsetof(cluster_screen_layout_settings_t, right_gauge_channels),
          CLUSTER_GAUGE_SLOT_COUNT},
-        {"screenLayout.leftTrendChannels.",
-         offsetof(cluster_screen_layout_settings_t, left_trend_channels),
-         CLUSTER_TREND_SLOT_COUNT},
-        {"screenLayout.rightTrendChannels.",
-         offsetof(cluster_screen_layout_settings_t, right_trend_channels),
-         CLUSTER_TREND_SLOT_COUNT},
     };
     for (size_t list = 0; list < sizeof(channel_lists) / sizeof(channel_lists[0]);
          ++list) {
@@ -797,7 +786,7 @@ static esp_err_t start_http(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.stack_size = 8192;
-    config.max_uri_handlers = 12;  /* 11 used */
+    config.max_uri_handlers = 16;  /* 11 here plus the OTA service */
     /* httpd needs max_open_sockets + 3 LWIP sockets, and the DNS server and
      * cluster UDP link hold more. With the default CONFIG_LWIP_MAX_SOCKETS=10,
      * the stock value (7) leaves accept() failing under load. 5 fits; with
@@ -829,7 +818,7 @@ static esp_err_t start_http(void)
         httpd_register_err_handler(http_server, HTTPD_404_NOT_FOUND,
                                    not_found_handler),
         TAG, "register portal redirect");
-    return ESP_OK;
+    return ota_service_register(http_server);
 }
 
 static void network_task(void *argument)

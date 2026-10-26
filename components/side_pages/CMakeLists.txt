@@ -1,6 +1,6 @@
 idf_component_register(
     SRCS "side_pages.c" "channel_info.c" "data_page.c" "gauges_page.c"
-         "trends_page.c" "peaks_page.c" "timer_page.c" "air_page.c"
+         "peaks_page.c" "timer_page.c" "air_page.c"
     INCLUDE_DIRS "include"
     PRIV_INCLUDE_DIRS "."
     REQUIRES climate_display cluster_protocol dash_fonts lvgl settings_schema

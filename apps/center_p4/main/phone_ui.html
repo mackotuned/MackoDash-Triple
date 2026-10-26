@@ -1342,6 +1342,54 @@ function buildAirSetup(p) {
     }), 'Stored targets — not applied automatically yet')
   ]));
 }
+/* Over-the-air updates: the P4 checks the image is for the chosen board,
+   then installs it (P4) or hands it to that board, which reports progress. */
+function firmwareCard() {
+  var boards = [['left', 'Left display'], ['right', 'Right display'], ['knob', 'Knob'],
+                ['climate', 'Climate controller'], ['center', 'Center P4 (restarts last)']];
+  var board = h('select', { 'aria-label': 'Board' });
+  boards.forEach(function (b) { board.appendChild(h('option', { value: b[0], text: b[1] })); });
+  var file = h('input', { type: 'file', accept: '.bin' });
+  var go = h('button', { class: 'btn', text: 'Upload and install' });
+  var state = h('div', { class: 'sub', text: 'Pick the board and its .bin from the build folder.' });
+  var timer = null;
+  function show(text) { state.textContent = text; }
+  function poll(target) {
+    clearTimeout(timer);
+    request('GET', '/api/ota/status', null, 3000).then(function (r) {
+      var st = r.json;
+      if (st && st.target === target) {
+        show(st.state.toUpperCase() + (st.percent ? ' ' + st.percent + '%' : '') + (st.message ? ' · ' + st.message : ''));
+        if (st.state === 'done') { toast('Firmware installed'); go.disabled = false; return; }
+        if (st.state === 'error') { toast('Update failed', true); go.disabled = false; return; }
+      }
+      timer = setTimeout(function () { poll(target); }, 1000);
+    });
+  }
+  go.addEventListener('click', function () {
+    var target = board.value, image = file.files && file.files[0];
+    if (!image) { toast('Choose a .bin file first', true); return; }
+    go.disabled = true;
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/ota/upload?target=' + target);
+    xhr.upload.onprogress = function (e) {
+      if (e.lengthComputable) show('UPLOADING ' + Math.round(e.loaded * 100 / e.total) + '%');
+    };
+    xhr.onload = function () {
+      var reply = {};
+      try { reply = JSON.parse(xhr.responseText); } catch (err) {}
+      if (xhr.status === 200 || xhr.status === 202) {
+        if (target === 'center') { show('INSTALLED · THE P4 IS RESTARTING'); go.disabled = false; return; }
+        show('OFFERED · WAITING FOR THE BOARD'); poll(target);
+      } else { show('REJECTED · ' + (reply.message || xhr.status)); go.disabled = false; }
+    };
+    xhr.onerror = function () { show('UPLOAD FAILED'); go.disabled = false; };
+    xhr.send(image);
+  });
+  return card('Update a board', [row('Board', null, h('div', { class: 'selwrap' }, board)),
+    row('Image', null, file), go, state], 'No cables: boards install over Wi-Fi and roll back if the new firmware fails to start');
+}
+
 function buildSystem(p) {
   /* Order matches vehicle_data_channel_t in the firmware. */
   var channels = ['RPM', 'Speed', 'Boost', 'Coolant', 'Intake', 'AFR', 'Oil pressure', 'Fuel pressure', 'Battery', 'Throttle', 'Fuel level',
@@ -1349,11 +1397,6 @@ function buildSystem(p) {
   function dataSlots(side) {
     return ['Main value', 'Lower left', 'Lower right'].map(function (label, i) {
       return select('screenLayout.' + side + 'ValueChannels.' + i, label, channels);
-    });
-  }
-  function trendSlots(side) {
-    return ['Line 1 (accent)', 'Line 2'].map(function (label, i) {
-      return select('screenLayout.' + side + 'TrendChannels.' + i, label, channels);
     });
   }
   function gaugeSlots(side) {
@@ -1370,9 +1413,7 @@ function buildSystem(p) {
     card('Left · Data page', dataSlots('left'), 'Large value and the two below it'),
     card('Right · Data page', dataSlots('right'), 'Large value and the two below it'),
     card('Left · Gauges page', gaugeSlots('left'), 'Six-value grid'),
-    card('Right · Gauges page', gaugeSlots('right'), 'Six-value grid'),
-    card('Left · Trends page', trendSlots('left'), 'Two values graphed over 20 seconds'),
-    card('Right · Trends page', trendSlots('right'), 'Two values graphed over 20 seconds')
+    card('Right · Gauges page', gaugeSlots('right'), 'Six-value grid')
   ])));
   var info = {};
   ['Settings revision', 'Schema version', 'Requests OK', 'Requests failed'].forEach(function (k) { info[k] = h('b', { text: '--' }); });
@@ -1390,6 +1431,7 @@ function buildSystem(p) {
       });
     });
   });
+  p.appendChild(section('Firmware', h('div', { class: 'grid c2' }, [firmwareCard()])));
   p.appendChild(section('Maintenance', h('div', { class: 'grid c2' }, [
     card('Status', Object.keys(info).map(function (k) { return h('div', { class: 'kv' }, [h('span', { text: k }), info[k]]); })),
     card('Reset', [h('div', { class: 'sub', text: 'Restores all display, engine, warning and Air Ride settings.' }), reset])

@@ -52,8 +52,8 @@ static bool display_mode_supported(cluster_display_target_t target,
     case CLUSTER_DISPLAY_RIGHT:
         return view == CLUSTER_VIEW_DATA || view == CLUSTER_VIEW_SPEEDOMETER ||
                view == CLUSTER_VIEW_AIR_RIDE || view == CLUSTER_VIEW_CLIMATE ||
-               view == CLUSTER_VIEW_GAUGES || view == CLUSTER_VIEW_TRENDS ||
-               view == CLUSTER_VIEW_PEAKS || view == CLUSTER_VIEW_TIMER;
+               view == CLUSTER_VIEW_GAUGES || view == CLUSTER_VIEW_PEAKS ||
+               view == CLUSTER_VIEW_TIMER;
     default:
         return false;
     }
@@ -432,12 +432,6 @@ static esp_err_t send_display_settings(void)
             (uint8_t)layout->left_gauge_channels[slot];
         display_settings.right_gauge_channels[slot] =
             (uint8_t)layout->right_gauge_channels[slot];
-    }
-    for (size_t slot = 0; slot < CLUSTER_TREND_SLOT_COUNT; ++slot) {
-        display_settings.left_trend_channels[slot] =
-            (uint8_t)layout->left_trend_channels[slot];
-        display_settings.right_trend_channels[slot] =
-            (uint8_t)layout->right_trend_channels[slot];
     }
     uint8_t payload[CLUSTER_LEFT_SETTINGS_PAYLOAD_SIZE];
     ESP_ERROR_CHECK(cluster_left_settings_encode(&display_settings, payload,
